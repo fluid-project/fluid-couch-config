@@ -19,7 +19,7 @@ var countMapFunction = function (doc) {
     emit("count", 1);
 };
 
-fluid.defaults("sjrk.server.couchConfig", {
+fluid.defaults("sjrk.server.couchDesignDocument", {
     gradeNames: "fluid.component",
     dbConfig: {
         couchURL: "http://localhost:5984",
@@ -42,17 +42,17 @@ fluid.defaults("sjrk.server.couchConfig", {
     },
     invokers: {
         generateViews: {
-            funcName: "sjrk.server.couchConfig.generateViews",
+            funcName: "sjrk.server.couchDesignDocument.generateViews",
             args: ["{that}.options.views"]
         },
         updateViews: {
-            funcName: "sjrk.server.couchConfig.updateViews",
+            funcName: "sjrk.server.couchDesignDocument.updateViews",
             args: ["{that}.generateViews", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.couchURL"]
         }
     }
 });
 
-sjrk.server.couchConfig.generateViews = function (desiredViews) {
+sjrk.server.couchDesignDocument.generateViews = function (desiredViews) {
     console.log(desiredViews);
     var transformedView = fluid.transform(desiredViews, function (desiredView, viewKey) {
         var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey){
@@ -63,7 +63,14 @@ sjrk.server.couchConfig.generateViews = function (desiredViews) {
     return transformedView;
 };
 
-sjrk.server.couchConfig.updateViews = function (transformedViewsFunc, dbName, couchURL) {
+sjrk.server.couchDesignDocument.baseDesignDocument =
+    {
+        _id: "_design/views",
+        views: {},
+        language: "javascript"
+    };
+
+sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, dbName, couchURL) {
     var generatedViews = transformedViewsFunc();
 
     var viewDoc;
@@ -73,7 +80,9 @@ sjrk.server.couchConfig.updateViews = function (transformedViewsFunc, dbName, co
     var stories = nano.use(dbName);
 
     stories.get("_design/views", function(err, body) {
+        // Design document exists
         if (!err) {
+            console.log("Design document found");
             viewDoc = body;
             console.log(viewDoc);
             viewDoc.views = generatedViews;
@@ -85,11 +94,27 @@ sjrk.server.couchConfig.updateViews = function (transformedViewsFunc, dbName, co
                     console.log(err, body);
                 }
             });
+        // Design document does not exist
+        } else {
+            console.log("Design document not found");
+            viewDoc = fluid.copy(sjrk.server.couchDesignDocument.baseDesignDocument);
+            console.log(viewDoc);
+            viewDoc.views = generatedViews;
+            console.log(viewDoc);
+            stories.insert(viewDoc, "_design/views", function (err, body) {
+                if(!err) {
+                    console.log(body);
+                } else {
+                    console.log(err, body);
+                }
+            });
         }
+
+
     });
 
 };
 
-var couchConfig = sjrk.server.couchConfig();
+var couchConfig = sjrk.server.couchDesignDocument();
 
 couchConfig.updateViews();
