@@ -71,9 +71,9 @@ sjrk.server.couchDesignDocument.generateViews = function (desiredViews) {
             if(typeof viewFunc === "function") {
                 return viewFunc.toString();
             }
-            // Resolve funcNames using fluid.registerNamespace
+            // Resolve funcNames using fluid.getGlobalValue
             if(typeof viewFunc === "string") {
-                var namedFunc = fluid.registerNamespace(viewFunc);
+                var namedFunc = fluid.getGlobalValue(viewFunc);
                 return namedFunc.toString();
             }
         });
