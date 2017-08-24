@@ -1,4 +1,5 @@
 var fluid = require("infusion");
+var isEqual = require("underscore").isEqual;
 
 var sjrk = fluid.registerNamespace("sjrk");
 
@@ -13,6 +14,10 @@ var authorMapFunction = function (doc) {
 
 var tagsMapFunction = function (doc) {
      emit("tags", doc.value.tags);
+};
+
+var languageMapFunction = function (doc) {
+     emit("language", doc.value.language);
 };
 
 var countMapFunction = function (doc) {
@@ -34,6 +39,9 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
         },
         tags: {
             map: tagsMapFunction
+        },
+        language: {
+            map: languageMapFunction
         },
         count: {
             map: countMapFunction,
@@ -84,16 +92,23 @@ sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, db
         if (!err) {
             console.log("Design document found");
             viewDoc = body;
-            console.log(viewDoc);
+            var originalViewDoc = fluid.copy(viewDoc);
+            
             viewDoc.views = generatedViews;
-            console.log(viewDoc);
-            stories.insert(viewDoc, "_design/views", function (err, body) {
-                if(!err) {
-                    console.log(body);
-                } else {
-                    console.log(err, body);
-                }
-            });
+            var viewsChanged = !isEqual(originalViewDoc, viewDoc);
+
+            if(viewsChanged) {
+                stories.insert(viewDoc, "_design/views", function (err, body) {
+                    console.log("views changed, updating");
+                    if(!err) {
+                        console.log(body);
+                    } else {
+                        console.log(err, body);
+                    }
+                });
+            } else {
+                console.log("Views unchanged, not updating")
+            }
         // Design document does not exist
         } else {
             console.log("Design document not found");
