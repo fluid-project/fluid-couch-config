@@ -3,7 +3,6 @@ var isEqual = require("underscore").isEqual;
 
 var sjrk = fluid.registerNamespace("sjrk");
 
-
 var titleMapFunction = function (doc) {
      emit("title", doc.value.title);
 };
@@ -28,7 +27,8 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
     gradeNames: "fluid.component",
     dbConfig: {
         couchURL: "http://localhost:5984",
-        dbName: "stories"
+        dbName: "stories",
+        designDocName: "views"
     },
     views: {
         titles: {
@@ -55,7 +55,7 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
         },
         updateViews: {
             funcName: "sjrk.server.couchDesignDocument.updateViews",
-            args: ["{that}.generateViews", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.couchURL"]
+            args: ["{that}.generateViews", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
         }
     }
 });
@@ -71,14 +71,15 @@ sjrk.server.couchDesignDocument.generateViews = function (desiredViews) {
     return transformedView;
 };
 
-sjrk.server.couchDesignDocument.baseDesignDocument =
-    {
-        _id: "_design/views",
-        views: {},
-        language: "javascript"
-    };
+sjrk.server.couchDesignDocument.getBaseDesignDocument = function (designDocName) {
+        return {
+            _id: "_design/" + designDocName,
+            views: {},
+            language: "javascript"
+        };
+};
 
-sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, dbName, couchURL) {
+sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, couchURL, dbName, designDocName) {
     var generatedViews = transformedViewsFunc();
 
     var viewDoc;
@@ -87,18 +88,21 @@ sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, db
 
     var stories = nano.use(dbName);
 
-    stories.get("_design/views", function(err, body) {
+    var designDocId = "_design/" + designDocName;
+    console.log(designDocId);
+
+    stories.get(designDocId, function(err, body) {
         // Design document exists
         if (!err) {
             console.log("Design document found");
             viewDoc = body;
             var originalViewDoc = fluid.copy(viewDoc);
-            
+
             viewDoc.views = generatedViews;
             var viewsChanged = !isEqual(originalViewDoc, viewDoc);
 
             if(viewsChanged) {
-                stories.insert(viewDoc, "_design/views", function (err, body) {
+                stories.insert(viewDoc, designDocId, function (err, body) {
                     console.log("views changed, updating");
                     if(!err) {
                         console.log(body);
@@ -112,11 +116,11 @@ sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, db
         // Design document does not exist
         } else {
             console.log("Design document not found");
-            viewDoc = fluid.copy(sjrk.server.couchDesignDocument.baseDesignDocument);
+            viewDoc = sjrk.server.couchDesignDocument.getBaseDesignDocument(designDocName);
             console.log(viewDoc);
             viewDoc.views = generatedViews;
             console.log(viewDoc);
-            stories.insert(viewDoc, "_design/views", function (err, body) {
+            stories.insert(viewDoc, designDocId, function (err, body) {
                 if(!err) {
                     console.log(body);
                 } else {
