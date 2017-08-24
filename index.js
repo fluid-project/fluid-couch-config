@@ -3,26 +3,6 @@ var isEqual = require("underscore").isEqual;
 
 var sjrk = fluid.registerNamespace("sjrk");
 
-var titleMapFunction = function (doc) {
-     emit("title", doc.value.title);
-};
-
-var authorMapFunction = function (doc) {
-     emit("author", doc.value.author);
-};
-
-var tagsMapFunction = function (doc) {
-     emit("tags", doc.value.tags);
-};
-
-var languageMapFunction = function (doc) {
-     emit("language", doc.value.language);
-};
-
-var countMapFunction = function (doc) {
-    emit("count", 1);
-};
-
 fluid.defaults("sjrk.server.couchDesignDocument", {
     gradeNames: "fluid.component",
     dbConfig: {
@@ -32,19 +12,19 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
     },
     views: {
         titles: {
-            map: titleMapFunction
+            map: "sjrk.server.couchDesignDocument.titleMapFunction"
         },
         authors: {
-            map: authorMapFunction
+            map: "sjrk.server.couchDesignDocument.authorMapFunction"
         },
         tags: {
-            map: tagsMapFunction
+            map: "sjrk.server.couchDesignDocument.tagsMapFunction"
         },
         language: {
-            map: languageMapFunction
+            map: "sjrk.server.couchDesignDocument.languageMapFunction"
         },
         count: {
-            map: countMapFunction,
+            map: "sjrk.server.couchDesignDocument.countMapFunction",
             reduce: "_count"
         }
     },
@@ -60,11 +40,42 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
     }
 });
 
+sjrk.server.couchDesignDocument.titleMapFunction = function (doc) {
+     emit("title", doc.value.title);
+};
+
+sjrk.server.couchDesignDocument.authorMapFunction = function (doc) {
+     emit("author", doc.value.author);
+};
+
+sjrk.server.couchDesignDocument.tagsMapFunction = function (doc) {
+     emit("tags", doc.value.tags);
+};
+
+sjrk.server.couchDesignDocument.languageMapFunction = function (doc) {
+     emit("language", doc.value.language);
+};
+
+sjrk.server.couchDesignDocument.countMapFunction = function (doc) {
+    emit("count", 1);
+};
+
 sjrk.server.couchDesignDocument.generateViews = function (desiredViews) {
-    console.log(desiredViews);
     var transformedView = fluid.transform(desiredViews, function (desiredView, viewKey) {
         var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey){
-            return viewFunc.toString();
+            // The internal CouchDB reduce functions
+            if(viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats") {
+                return viewFunc;
+            }
+            // Direct function references
+            if(typeof viewFunc === "function") {
+                return viewFunc.toString();
+            }
+            // Resolve funcNames using fluid.registerNamespace
+            if(typeof viewFunc === "string") {
+                var namedFunc = fluid.registerNamespace(viewFunc);
+                return namedFunc.toString();
+            }
         });
         return transformedFunction;
     });
@@ -111,7 +122,7 @@ sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, co
                     }
                 });
             } else {
-                console.log("Views unchanged, not updating")
+                console.log("Views unchanged, not updating");
             }
         // Design document does not exist
         } else {
