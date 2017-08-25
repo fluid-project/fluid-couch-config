@@ -35,7 +35,7 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
         },
         updateViews: {
             funcName: "sjrk.server.couchDesignDocument.updateViews",
-            args: ["{that}.generateViews", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
+            args: ["@expand:{that}.generateViews()", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
         }
     }
 });
@@ -60,8 +60,8 @@ sjrk.server.couchDesignDocument.countMapFunction = function (doc) {
     emit("count", 1);
 };
 
-sjrk.server.couchDesignDocument.generateViews = function (desiredViews) {
-    var transformedView = fluid.transform(desiredViews, function (desiredView, viewKey) {
+sjrk.server.couchDesignDocument.generateViews = function (viewsObj) {
+    var transformedView = fluid.transform(viewsObj, function (desiredView, viewKey) {
         var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey){
             // The internal CouchDB reduce functions
             if(viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats") {
@@ -90,8 +90,7 @@ sjrk.server.couchDesignDocument.getBaseDesignDocument = function (designDocName)
         };
 };
 
-sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, couchURL, dbName, designDocName) {
-    var generatedViews = transformedViewsFunc();
+sjrk.server.couchDesignDocument.updateViews = function (generatedViews, couchURL, dbName, designDocName) {
 
     var viewDoc;
 
@@ -128,9 +127,7 @@ sjrk.server.couchDesignDocument.updateViews = function (transformedViewsFunc, co
         } else {
             console.log("Design document not found");
             viewDoc = sjrk.server.couchDesignDocument.getBaseDesignDocument(designDocName);
-            console.log(viewDoc);
             viewDoc.views = generatedViews;
-            console.log(viewDoc);
             stories.insert(viewDoc, designDocId, function (err, body) {
                 if(!err) {
                     console.log(body);
