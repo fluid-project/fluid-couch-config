@@ -4,7 +4,7 @@ var isEqual = require("underscore").isEqual;
 var sjrk = fluid.registerNamespace("sjrk");
 
 fluid.defaults("sjrk.server.couchConfig", {
-    gradeNames: "fluid.component",
+    gradeNames: ["fluid.component"],
     dbConfig: {
         couchURL: "http://localhost:5984",
         // These should be set in the derived grade
@@ -26,17 +26,6 @@ fluid.defaults("sjrk.server.couchConfig", {
     events: {
         onDBExists: null
     },
-    listeners: {
-        "onCreate.ensureDBExists": {
-            func: "{that}.ensureDBExists"
-        },
-        "onDBExists.updateDocuments": {
-            func: "{that}.updateDocuments"
-        },
-        "onDBExists.updateViews": {
-            func: "{that}.updateViews"
-        }
-    },
     invokers: {
         ensureDBExists: {
             funcName: "sjrk.server.couchConfig.ensureDBExists",
@@ -53,6 +42,21 @@ fluid.defaults("sjrk.server.couchConfig", {
         updateViews: {
             funcName: "sjrk.server.couchConfig.updateViews",
             args: ["@expand:{that}.generateViews()", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
+        }
+    }
+});
+
+fluid.defaults("sjrk.server.couchConfig.auto", {
+    gradeNames: ["sjrk.server.couchConfig"],
+    listeners: {
+        "onCreate.ensureDBExists": {
+            func: "{that}.ensureDBExists"
+        },
+        "onDBExists.updateDocuments": {
+            func: "{that}.updateDocuments"
+        },
+        "onDBExists.updateViews": {
+            func: "{that}.updateViews"
         }
     }
 });
@@ -210,9 +214,11 @@ sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName
             viewDoc.views = generatedViews;
             targetDB.insert(viewDoc, designDocId, function (err, body) {
                 if(!err) {
+                    console.log("Views created successfully");
                     console.log(body);
                 } else {
                     console.log(err, body);
+                    console.log("Error in creating views");
                 }
             });
         }

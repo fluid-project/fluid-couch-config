@@ -5,25 +5,36 @@ var sjrk = fluid.registerNamespace("sjrk");
 require("./src/couchConfig");
 
 fluid.defaults("sjrk.server.couchConfig.test", {
-    gradeNames: "sjrk.server.couchConfig",
+    gradeNames: ["sjrk.server.couchConfig.auto"],
     dbConfig: {
         dbName: "test",
         designDocName: "views"
     },
     dbDocuments: {
         "test1": {
-            "message": "Hello, World!"
+            "message": "Hello, World!",
+            "tags": ["Hello", "World"]
         },
         "test2": {
-            "message": "Goodbye, World!"
+            "message": "Goodbye, World!",
+            "tags": ["Goodbye", "World"]
+        }
+    },
+    dbViews: {
+        "tags": {
+            "map": "sjrk.server.couchConfig.test.tagsMapFunction"
         }
     }
 });
 
+sjrk.server.couchConfig.test.tagsMapFunction = function (doc) {
+    emit("tags", doc.tags);
+};
+
 var testConfig = sjrk.server.couchConfig.test();
 
 fluid.defaults("sjrk.server.couchConfig.stories", {
-    gradeNames: "sjrk.server.couchConfig",
+    gradeNames: "sjrk.server.couchConfig.auto",
     dbConfig: {
         dbName: "stories",
         designDocName: "views"
