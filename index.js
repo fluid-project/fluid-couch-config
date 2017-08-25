@@ -7,6 +7,35 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
     gradeNames: "fluid.component",
     dbConfig: {
         couchURL: "http://localhost:5984",
+        // These should be set in the derived grade
+        // dbName: "stories",
+        // designDocName: "views"
+    },
+    // Set in derived grade - map / reduce can be a function reference or a
+    // function name as string. CouchDB's internal reduce functions can also
+    // be used by name in the reduce key
+    views: {
+        // count: {
+        //     map: "sjrk.server.couchDesignDocument.countMapFunction",
+        //     reduce: "_count"
+        // }
+    },
+    invokers: {
+        generateViews: {
+            funcName: "sjrk.server.couchDesignDocument.generateViews",
+            args: ["{that}.options.views"]
+        },
+        updateViews: {
+            funcName: "sjrk.server.couchDesignDocument.updateViews",
+            args: ["@expand:{that}.generateViews()", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
+        }
+    }
+});
+
+fluid.defaults("sjrk.server.couchDesignDocument.stories", {
+    gradeNames: "sjrk.server.couchDesignDocument",
+    dbConfig: {
+        couchURL: "http://localhost:5984",
         dbName: "stories",
         designDocName: "views"
     },
@@ -26,16 +55,6 @@ fluid.defaults("sjrk.server.couchDesignDocument", {
         count: {
             map: "sjrk.server.couchDesignDocument.countMapFunction",
             reduce: "_count"
-        }
-    },
-    invokers: {
-        generateViews: {
-            funcName: "sjrk.server.couchDesignDocument.generateViews",
-            args: ["{that}.options.views"]
-        },
-        updateViews: {
-            funcName: "sjrk.server.couchDesignDocument.updateViews",
-            args: ["@expand:{that}.generateViews()", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
         }
     }
 });
@@ -142,6 +161,6 @@ sjrk.server.couchDesignDocument.updateViews = function (generatedViews, couchURL
 
 };
 
-var couchConfig = sjrk.server.couchDesignDocument();
+var couchConfig = sjrk.server.couchDesignDocument.stories();
 
 couchConfig.updateViews();
