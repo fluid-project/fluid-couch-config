@@ -21,13 +21,15 @@ fluid.defaults("sjrk.server.couchConfig", {
         //     reduce: "_count"
         // }
     },
-    // Ensure one or more documents exist; key will be _id
+    // Ensure one or more documents exist; key will be used as the document _id
     dbDocuments: {
         // "test1": {
         //     "message": "Hello, World!",
         //     "tags": ["Hello", "World", "test"]
         // }
     },
+    // Fired after the component confirms the target DB exists;
+    // necessary for sequencing document-related updates
     events: {
         onDBExists: null
     },
