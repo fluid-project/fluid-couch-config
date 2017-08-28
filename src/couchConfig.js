@@ -21,8 +21,12 @@ fluid.defaults("sjrk.server.couchConfig", {
         //     reduce: "_count"
         // }
     },
-    // Ensure one or more documents exist
+    // Ensure one or more documents exist; key will be _id
     dbDocuments: {
+        // "test1": {
+        //     "message": "Hello, World!",
+        //     "tags": ["Hello", "World", "test"]
+        // }
     },
     events: {
         onDBExists: null

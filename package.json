@@ -1,5 +1,5 @@
 {
-  "name": "couch-config",
+  "name": "sjrk-couch-config",
   "version": "0.0.1",
   "description": "Declarative CouchDB configs using Infusion",
   "main": "index.js",
