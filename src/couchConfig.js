@@ -5,12 +5,66 @@ var isEqual = require("underscore").isEqual;
 
 var sjrk = fluid.registerNamespace("sjrk");
 
-fluid.defaults("sjrk.server.couchConfig", {
+fluid.defaults("sjrk.server.couchConfig.base", {
     gradeNames: ["fluid.component"],
     dbConfig: {
         couchURL: "http://localhost:5984"
-        // These should be set in the derived grade
+    }
+});
+
+fluid.defaults("sjrk.server.couchConfig.db", {
+    gradeNames: ["sjrk.server.couchConfig.base"],
+    dbConfig: {
         // dbName: "targetDB",
+    },
+    events: {
+        // Fired after the component confirms the target DB exists;
+        // necessary for sequencing document-related updates
+        onDBExists: null
+    },
+    invokers: {
+        ensureDBExists: {
+            funcName: "sjrk.server.couchConfig.ensureDBExists",
+            args: ["{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDBExists"]
+        }
+    }
+});
+
+fluid.defaults("sjrk.server.couchConfig.documents", {
+    gradeNames: ["sjrk.server.couchConfig.base"],
+    dbDocuments: {
+        // "test1": {
+        //     "message": "Hello, World!",
+        //     "tags": ["Hello", "World", "test"]
+        // }
+    },
+    invokers: {
+        updateDocuments: {
+            funcName: "sjrk.server.couchConfig.updateDocuments",
+            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName"]
+        }
+    }
+});
+
+fluid.defaults("sjrk.server.couchConfig.designDocument", {
+    gradeNames: ["sjrk.server.couchConfig.base"],
+    events: {
+        // Fired after the design document is updated
+        // necessary for making sure documents aren't pushed before a
+        // validation function is in place
+        onDesignDocUpdated: null
+    },
+    invokers: {
+        generateViews: {
+            funcName: "sjrk.server.couchConfig.generateViews",
+            args: ["{that}.options.dbViews"]
+        },
+        updateDesignDoc: {
+            funcName: "sjrk.server.couchConfig.updateDesignDoc",
+            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
+        }
+    },
+    dbConfig: {
         // designDocName: "views"
     },
     // Set in derived grade - map / reduce can be a function reference or a
@@ -26,44 +80,11 @@ fluid.defaults("sjrk.server.couchConfig", {
     //     validateFunction: "sjrk.server.couchConfig.validateFunction"
     // },
     // Ensure one or more documents exist; key will be used as the document _id
-    dbDocuments: {
-        // "test1": {
-        //     "message": "Hello, World!",
-        //     "tags": ["Hello", "World", "test"]
-        // }
-    },
-    events: {
-        // Fired after the component confirms the target DB exists;
-        // necessary for sequencing document-related updates
-        onDBExists: null,
-        // Fired after the design document is updated
-        // necessary for making sure documents aren't pushed before a
-        // validation function is in place
-        onDesignDocUpdated: null
-    },
-    invokers: {
-        ensureDBExists: {
-            funcName: "sjrk.server.couchConfig.ensureDBExists",
-            args: ["{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDBExists"]
-        },
-        updateDocuments: {
-            funcName: "sjrk.server.couchConfig.updateDocuments",
-            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName"]
-        },
-        generateViews: {
-            funcName: "sjrk.server.couchConfig.generateViews",
-            args: ["{that}.options.dbViews"]
-        },
-        updateDesignDoc: {
-            funcName: "sjrk.server.couchConfig.updateDesignDoc",
-            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
-        }
-    }
 });
 
 // Convenience grade that calls all the configuration functions at instantiation
 fluid.defaults("sjrk.server.couchConfig.auto", {
-    gradeNames: ["sjrk.server.couchConfig"],
+    gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
     listeners: {
         "onCreate.ensureDBExists": {
             func: "{that}.ensureDBExists"

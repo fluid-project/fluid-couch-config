@@ -1,3 +1,5 @@
+/* global emit */
+
 "use strict";
 
 var fluid = require("infusion");
@@ -5,7 +7,7 @@ var fluid = require("infusion");
 var sjrk = fluid.registerNamespace("sjrk");
 require("../src/couchConfig");
 
-fluid.defaults("sjrk.server.couchConfig.test", {
+fluid.defaults("sjrk.server.couchConfig.example", {
     gradeNames: ["sjrk.server.couchConfig.auto"],
     dbConfig: {
         dbName: "test",
@@ -30,23 +32,23 @@ fluid.defaults("sjrk.server.couchConfig.test", {
     },
     dbViews: {
         "tags": {
-            "map": "sjrk.server.couchConfig.test.tagsMapFunction"
+            "map": "sjrk.server.couchConfig.example.tagsMapFunction"
         }
     },
     dbValidate: {
-        validateFunction: "sjrk.server.couchConfig.test.validateFunction"
+        validateFunction: "sjrk.server.couchConfig.example.validateFunction"
     }
 });
 
-sjrk.server.couchConfig.test.tagsMapFunction = function (doc) {
+sjrk.server.couchConfig.example.tagsMapFunction = function (doc) {
     emit("tags", doc.tags);
 };
 
 
-sjrk.server.couchConfig.test.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
+sjrk.server.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
     if (!newDoc.type) {
         throw ({forbidden: "doc.type is required"});
     }
 };
 
-sjrk.server.couchConfig.test();
+sjrk.server.couchConfig.example();
