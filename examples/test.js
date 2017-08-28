@@ -1,6 +1,9 @@
 /* eslint-env node */
+/* global emit */
+
+"use strict";
+
 var fluid = require("infusion");
-var isEqual = require("underscore").isEqual;
 
 var sjrk = fluid.registerNamespace("sjrk");
 require("../src/couchConfig");
@@ -32,4 +35,4 @@ sjrk.server.couchConfig.test.tagsMapFunction = function (doc) {
     emit("tags", doc.tags);
 };
 
-var testConfig = sjrk.server.couchConfig.test();
+sjrk.server.couchConfig.test();

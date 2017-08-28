@@ -1,8 +1,9 @@
 // Declare dependencies
 /* global module */
 
+"use strict";
+
 module.exports = function (grunt) {
-    "use strict";
 
     // Project configuration.
     grunt.initConfig({

@@ -1,6 +1,7 @@
+"use strict";
+
 /* eslint-env node */
 var fluid = require("infusion");
-"use strict";
 
 require("./src/couchConfig");
 

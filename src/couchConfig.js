@@ -1,4 +1,5 @@
-/* eslint-env node */
+"use strict";
+
 var fluid = require("infusion");
 var isEqual = require("underscore").isEqual;
 
@@ -7,7 +8,7 @@ var sjrk = fluid.registerNamespace("sjrk");
 fluid.defaults("sjrk.server.couchConfig", {
     gradeNames: ["fluid.component"],
     dbConfig: {
-        couchURL: "http://localhost:5984",
+        couchURL: "http://localhost:5984"
         // These should be set in the derived grade
         // dbName: "targetDB",
         // designDocName: "views"
@@ -70,7 +71,7 @@ fluid.defaults("sjrk.server.couchConfig.auto", {
 });
 
 sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName) {
-    if(isEqual(documents, {})) {
+    if (isEqual(documents, {})) {
         console.log("No documents to update");
         return;
     }
@@ -84,36 +85,36 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
     fluid.each(documents, function (doc, id) {
 
         targetDB.get(id, function (err, body) {
-            if(!err) {
+            if (!err) {
                 console.log("Document " + id + " found");
 
                 var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
                 var docValuesEqual = isEqual(doc, existingDocValues);
-                if(docValuesEqual) {
+                if (docValuesEqual) {
                     console.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
                     return;
                 }
 
                 doc._rev = body._rev;
                 targetDB.insert(doc, id, function (err, body) {
-                    if(!err) {
+                    if (!err) {
                         console.log("Update of document " + id + " inserted");
                         console.log(body);
                     }
-                    if(err) {
+                    if (err) {
                         console.log("Update of document " + id + " could not be inserted");
                         console.log(err, body);
                     }
                 });
             }
-            if(err) {
+            if (err) {
                 console.log("Document " + id + " not found, creating");
                 targetDB.insert(doc, id, function (err, body) {
-                    if(!err) {
+                    if (!err) {
                         console.log("Document " + id + " inserted");
                         console.log(body);
                     }
-                    if(err) {
+                    if (err) {
                         console.log("Document " + id + " could not be inserted");
                         console.log(err, body);
                     }
@@ -126,15 +127,15 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
 sjrk.server.couchConfig.ensureDBExists = function (couchURL, dbName, completionEvent) {
     console.log("Making sure DB " + dbName + " exists in Couch instance at " + couchURL);
     var nano = require("nano")(couchURL);
-    nano.db.get(dbName, function(err, body) {
-        if(!err) {
+    nano.db.get(dbName, function (err, body) {
+        if (!err) {
             console.log("DB " + dbName + " exists");
             completionEvent.fire();
         } else {
-            if(err.statusCode === 404) {
+            if (err.statusCode === 404) {
                 console.log("DB does not exist, trying to create");
                 nano.db.create(dbName, function (err, body) {
-                    if(!err) {
+                    if (!err) {
                         console.log("DB " + dbName + " created");
                         completionEvent.fire();
                     } else {
@@ -152,18 +153,18 @@ sjrk.server.couchConfig.ensureDBExists = function (couchURL, dbName, completionE
 };
 
 sjrk.server.couchConfig.generateViews = function (viewsObj) {
-    var transformedView = fluid.transform(viewsObj, function (desiredView, viewKey) {
-        var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey){
+    var transformedView = fluid.transform(viewsObj, function (desiredView) {
+        var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey) {
             // The internal CouchDB reduce functions
-            if(funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
+            if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
                 return viewFunc;
             }
             // Direct function references
-            if(typeof viewFunc === "function") {
+            if (typeof viewFunc === "function") {
                 return viewFunc.toString();
             }
             // Resolve funcNames using fluid.getGlobalValue
-            if(typeof viewFunc === "string") {
+            if (typeof viewFunc === "string") {
                 var namedFunc = fluid.getGlobalValue(viewFunc);
                 return namedFunc.toString();
             }
@@ -175,16 +176,16 @@ sjrk.server.couchConfig.generateViews = function (viewsObj) {
 
 // Generates a base design document
 sjrk.server.couchConfig.getBaseDesignDocument = function (designDocName) {
-        return {
-            _id: "_design/" + designDocName,
-            views: {},
-            language: "javascript"
-        };
+    return {
+        _id: "_design/" + designDocName,
+        views: {},
+        language: "javascript"
+    };
 };
 
 sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName, designDocName) {
 
-    if(isEqual(generatedViews, {})) {
+    if (isEqual(generatedViews, {})) {
         console.log("No defined views to update");
         return;
     }
@@ -199,7 +200,7 @@ sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName
 
     var designDocId = "_design/" + designDocName;
 
-    targetDB.get(designDocId, function(err, body) {
+    targetDB.get(designDocId, function (err, body) {
         // Design document exists
         if (!err) {
             console.log("Existing design document found");
@@ -209,10 +210,10 @@ sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName
             viewDoc.views = generatedViews;
             var viewsChanged = !isEqual(originalViewDoc, viewDoc);
 
-            if(viewsChanged) {
+            if (viewsChanged) {
                 targetDB.insert(viewDoc, designDocId, function (err, body) {
                     console.log("Views have been changed, attempting to update");
-                    if(!err) {
+                    if (!err) {
                         console.log("Views updated successfully");
                         console.log(body);
                     } else {
@@ -229,7 +230,7 @@ sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName
             viewDoc = sjrk.server.couchConfig.getBaseDesignDocument(designDocName);
             viewDoc.views = generatedViews;
             targetDB.insert(viewDoc, designDocId, function (err, body) {
-                if(!err) {
+                if (!err) {
                     console.log("Views created successfully");
                     console.log(body);
                 } else {
