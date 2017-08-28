@@ -1,3 +1,4 @@
+/* eslint-env node */
 var fluid = require("infusion");
 var isEqual = require("underscore").isEqual;
 
@@ -46,6 +47,7 @@ fluid.defaults("sjrk.server.couchConfig", {
     }
 });
 
+// Convenience grade that calls all the configuration functions at instantiation
 fluid.defaults("sjrk.server.couchConfig.auto", {
     gradeNames: ["sjrk.server.couchConfig"],
     listeners: {
@@ -77,15 +79,23 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
 
         targetDB.get(id, function (err, body) {
             if(!err) {
-                console.log("Document " + id + " found, updating");
+                console.log("Document " + id + " found");
+
+                var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
+                var docValuesEqual = isEqual(doc, existingDocValues);
+                if(docValuesEqual) {
+                    console.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
+                    return;
+                }
+
                 doc._rev = body._rev;
                 targetDB.insert(doc, id, function (err, body) {
                     if(!err) {
-                        console.log("Document " + id + " inserted");
+                        console.log("Update of document " + id + " inserted");
                         console.log(body);
                     }
                     if(err) {
-                        console.log("Document " + id + " could not be inserted");
+                        console.log("Update of document " + id + " could not be inserted");
                         console.log(err, body);
                     }
                 });
@@ -209,7 +219,7 @@ sjrk.server.couchConfig.updateViews = function (generatedViews, couchURL, dbName
             }
         // Design document does not exist
         } else {
-            console.log("Design document not found, creating with cconfigured views");
+            console.log("Design document not found, creating with configured views");
             viewDoc = sjrk.server.couchConfig.getBaseDesignDocument(designDocName);
             viewDoc.views = generatedViews;
             targetDB.insert(viewDoc, designDocId, function (err, body) {
