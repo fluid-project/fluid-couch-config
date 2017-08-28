@@ -32,10 +32,14 @@ fluid.defaults("sjrk.server.couchConfig", {
         //     "tags": ["Hello", "World", "test"]
         // }
     },
-    // Fired after the component confirms the target DB exists;
-    // necessary for sequencing document-related updates
     events: {
-        onDBExists: null
+        // Fired after the component confirms the target DB exists;
+        // necessary for sequencing document-related updates
+        onDBExists: null,
+        // Fired after the design document is updated
+        // necessary for making sure documents aren't pushed before a
+        // validation function is in place
+        onDesignDocUpdated: null
     },
     invokers: {
         ensureDBExists: {
@@ -52,7 +56,7 @@ fluid.defaults("sjrk.server.couchConfig", {
         },
         updateDesignDoc: {
             funcName: "sjrk.server.couchConfig.updateDesignDoc",
-            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName"]
+            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
         }
     }
 });
@@ -64,12 +68,13 @@ fluid.defaults("sjrk.server.couchConfig.auto", {
         "onCreate.ensureDBExists": {
             func: "{that}.ensureDBExists"
         },
-        "onDBExists.updateDocuments": {
-            func: "{that}.updateDocuments"
-        },
         "onDBExists.updateDesignDoc": {
             func: "{that}.updateDesignDoc"
+        },
+        "onDesignDocUpdated.updateDocuments": {
+            func: "{that}.updateDocuments"
         }
+
     }
 });
 
@@ -186,7 +191,7 @@ sjrk.server.couchConfig.getBaseDesignDocument = function (designDocName) {
     };
 };
 
-sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunction, couchURL, dbName, designDocName) {
+sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunction, couchURL, dbName, designDocName, completionEvent) {
 
     var designDocObj = {};
 
@@ -237,21 +242,23 @@ sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunc
 
             if (designDocChanged) {
                 targetDB.insert(designDoc, designDocId, function (err, body) {
-                    console.log("Views have been changed, attempting to update");
+                    console.log("Design doc has been changed, attempting to update");
                     if (!err) {
-                        console.log("Views updated successfully");
+                        console.log("Design doc updated successfully");
                         console.log(body);
+                        completionEvent.fire();
                     } else {
-                        console.log("Error in updating views");
+                        console.log("Error in updating design doc");
                         console.log(err, body);
                     }
                 });
             } else {
                 console.log("Design document unchanged from existing in CouchDB, not updating");
+                completionEvent.fire();
             }
         // Design document does not exist
         } else {
-            console.log("Design document not found, creating with configured views");
+            console.log("Design document not found, creating");
             designDoc = sjrk.server.couchConfig.getBaseDesignDocument(designDocName);
 
             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
@@ -260,11 +267,12 @@ sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunc
 
             targetDB.insert(designDoc, designDocId, function (err, body) {
                 if (!err) {
-                    console.log("Views created successfully");
+                    console.log("Design doc created successfully");
                     console.log(body);
+                    completionEvent.fire();
                 } else {
                     console.log(err, body);
-                    console.log("Error in creating views");
+                    console.log("Error in creating design document");
                 }
             });
         }

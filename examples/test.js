@@ -17,16 +17,18 @@ fluid.defaults("sjrk.server.couchConfig.test", {
     dbDocuments: {
         "test1": {
             "message": "Hello, World!",
-            "tags": ["Hello", "World", "test"]
+            "tags": ["Hello", "World", "test"],
+            "type": "message"
         },
         "test2": {
             "message": "Goodbye, World!",
-            "tags": ["Goodbye", "World"]
-        },
-        "test3": {
-            "message": "Goodbye, World!",
             "tags": ["Goodbye", "World"],
             "type": "message"
+        },
+        // This document will fail due to the validation function
+        "test3": {
+            "message": "Goodbye, World!",
+            "tags": ["Goodbye", "World"]
         }
     },
     dbViews: {
