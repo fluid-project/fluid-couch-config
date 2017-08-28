@@ -1,6 +1,3 @@
-/* eslint-env node */
-/* global emit */
-
 "use strict";
 
 var fluid = require("infusion");
@@ -27,8 +24,8 @@ fluid.defaults("sjrk.server.couchConfig.test", {
         },
         // This document will fail due to the validation function
         "test3": {
-            "message": "Goodbye, World!",
-            "tags": ["Goodbye", "World"]
+            "message": "I don't have a 'type' field.",
+            "tags": ["Invalid"]
         }
     },
     dbViews: {
@@ -47,8 +44,8 @@ sjrk.server.couchConfig.test.tagsMapFunction = function (doc) {
 
 
 sjrk.server.couchConfig.test.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
-    if(! newDoc.type) {
-        throw({forbidden: 'doc.type is required'});
+    if (!newDoc.type) {
+        throw ({forbidden: "doc.type is required"});
     }
 };
 

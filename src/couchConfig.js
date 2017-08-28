@@ -83,6 +83,7 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
         console.log("No documents to update");
         return;
     }
+
     console.log("Updating documents at for DB " + dbName + " in Couch instance at " + couchURL);
 
     var nano = require("nano")(couchURL);
