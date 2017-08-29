@@ -9,50 +9,72 @@ https://raw.githubusercontent.com/BlueSlug/couch-config/master/LICENSE.txt
 
 /* global fluid, sjrk, jqUnit */
 
-(function ($, fluid) {
+var fluid = require("infusion");
+var sjrk  = fluid.registerNamespace("sjrk");
 
-    "use strict";
+var gpii  = fluid.registerNamespace("gpii");
+require("gpii-pouchdb");
+gpii.pouch.loadTestingSupport();
 
-    fluid.defaults("sjrk.server.testCouchConfig", {
-        gradeNames: ["sjrk.server.couchConfig"],
-        dbConfig: {
-            dbName: "testDbForTests",
-            designDocName: "testViews"
-        }
-    });
+require("../../src/couchConfig");
 
-    fluid.defaults("sjrk.server.testCouchConfigTester", {
-        gradeNames: ["fluid.test.testCaseHolder"],
-        modules: [{
-            name: "Test couch config.",
-            tests: [{
-                name: "Test CouchDB intializing",
-                expect: 0,
-                sequence: [{
-                    // TODO: fill in with invoker calls and verify results
-                    "func": "fluid.identity"
-                }]
+"use strict";
+
+fluid.defaults("sjrk.server.testCouchConfig", {
+    gradeNames: ["sjrk.server.couchConfig.db"],
+    dbConfig: {
+        couchURL: "http://localhost:6789",
+        dbName: "testDbForTests",
+        designDocName: "testViews"
+    }
+});
+
+fluid.defaults("sjrk.server.couchConfigTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    modules: [{
+        name: "Test couch config.",
+        tests: [{
+            name: "Test CouchDB intializing",
+            expect: 1,
+            sequence: [{
+                "func": "{couchConfigTest}.couchConfig.ensureDBExists"
+            },
+            {
+                "event": "{couchConfig}.events.onDBExists",
+                "listener": "jqUnit.assert",
+                args: ["it fired!"]
             }]
         }]
-    });
+    }]
+});
 
-    fluid.defaults("sjrk.server.couchConfigTest", {
-        gradeNames: ["fluid.test.testEnvironment"],
-        components: {
-            couchConfig: {
-                type: "sjrk.server.testCouchConfigTester",
-                createOnEvent: "{testCouchConfigTester}.events.onTestCaseStart"
-            },
-            couchConfigTester: {
-                type: "sjrk.server.testCouchConfigTester"
-            }
+fluid.defaults("sjrk.server.couchConfigTest", {
+    gradeNames: ["gpii.test.pouch.environment"],
+    port: 6789,
+    //harnessGrades: ["sjrk.server.testCouchConfig"],
+    components: {
+        couchConfig: {
+            type: "sjrk.server.testCouchConfig",
+            createOnEvent: "{couchConfigTester}.events.onTestCaseStart"
+        },
+        couchConfigTester: {
+            type: "sjrk.server.couchConfigTester"
         }
-    });
+    },
+    listeners: {
+        "onCreate.constructFixtures": {
+            func: "{that}.events.constructFixtures.fire"
+        },
+        "onFixturesConstructed.log": {
+            "func": "sjrk.server.couchConfigTest.log",
+            args: ["Fixtures here!"]
+        }
+    }
+});
 
-    $(document).ready(function () {
-        fluid.test.runTests([
-            "sjrk.server.couchConfigTest"
-        ]);
-    });
+sjrk.server.couchConfigTest.log = function (message) {
+    console.log(message);
+}
 
-})(jQuery, fluid);
+//sjrk.server.couchConfigTest();
+fluid.test.runTests("sjrk.server.couchConfigTest");
