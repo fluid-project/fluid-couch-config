@@ -32,6 +32,7 @@ fluid.defaults("sjrk.server.couchConfig.db", {
 
 fluid.defaults("sjrk.server.couchConfig.documents", {
     gradeNames: ["sjrk.server.couchConfig.base"],
+    // Ensure one or more documents exist; key will be used as the document _id
     dbDocuments: {
         // "test1": {
         //     "message": "Hello, World!",
@@ -67,19 +68,21 @@ fluid.defaults("sjrk.server.couchConfig.designDocument", {
     dbConfig: {
         // designDocName: "views"
     },
-    // Set in derived grade - map / reduce can be a function reference or a
-    // function name as string. CouchDB's internal reduce functions can also
-    // be used by name in the reduce key
+    // map / reduce can be a function reference or a
+    // function name as string. CouchDB's internal
+    // reduce functions (_sum, _count, and _stats) can also
+    // be used by name as strings in the reduce key
     dbViews: {
         // count: {
         //     map: "sjrk.server.couchConfig.countMapFunction",
         //     reduce: "_count"
         // }
     },
-    // dbValidate: {
-    //     validateFunction: "sjrk.server.couchConfig.validateFunction"
-    // },
-    // Ensure one or more documents exist; key will be used as the document _id
+    // Supply a validation function to be mapped to validate_doc_update in the
+    // design document
+    dbValidate: {
+        // validateFunction: "sjrk.server.couchConfig.validateFunction"
+    }
 });
 
 // Convenience grade that calls all the configuration functions at instantiation

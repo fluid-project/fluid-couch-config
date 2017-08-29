@@ -24,7 +24,8 @@ fluid.defaults("sjrk.server.couchConfig.example", {
             "tags": ["Goodbye", "World"],
             "type": "message"
         },
-        // This document will fail due to the validation function
+        // This document will fail to be updated/inserted due to the
+        // validation function
         "test3": {
             "message": "I don't have a 'type' field.",
             "tags": ["Invalid"]
