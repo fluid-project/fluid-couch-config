@@ -39,10 +39,16 @@ fluid.defaults("sjrk.server.couchConfig.documents", {
         //     "tags": ["Hello", "World", "test"]
         // }
     },
+    events: {
+        // Fired after the documents are updated
+        // necessary for making sure documents aren't pushed before a
+        // validation function is in place
+        onDocsUpdated: null
+    },
     invokers: {
         updateDocuments: {
             funcName: "sjrk.server.couchConfig.updateDocuments",
-            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName"]
+            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDocsUpdated"]
         }
     }
 });
@@ -102,7 +108,7 @@ fluid.defaults("sjrk.server.couchConfig.auto", {
     }
 });
 
-sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName) {
+sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName, completionEvent) {
     if (isEqual(documents, {})) {
         console.log("No documents to update");
         return;
@@ -125,6 +131,7 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
                 var docValuesEqual = isEqual(doc, existingDocValues);
                 if (docValuesEqual) {
                     console.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
+                    completionEvent.fire();
                     return;
                 }
 
@@ -133,6 +140,7 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
                     if (!err) {
                         console.log("Update of document " + id + " inserted");
                         console.log(body);
+                        completionEvent.fire();
                     }
                     if (err) {
                         console.log("Update of document " + id + " could not be inserted");
@@ -146,6 +154,7 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
                     if (!err) {
                         console.log("Document " + id + " inserted");
                         console.log(body);
+                        completionEvent.fire();
                     }
                     if (err) {
                         console.log("Document " + id + " could not be inserted");
