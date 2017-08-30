@@ -18,13 +18,14 @@
   "homepage": "",
   "dependencies": {
     "infusion": "2.0.0",
-    "kettle": "1.6.4",
     "nano": "6.4.0",
     "underscore": "1.8.3"
   },
   "devDependencies": {
     "eslint-config-fluid": "1.1.0",
     "fluid-grunt-eslint": "18.1.2",
+    "gpii-pouchdb": "1.0.7",
+    "kettle": "1.6.4",
     "grunt": "1.0.1",
     "grunt-eslint": "20.0.0",
     "grunt-jsonlint": "1.1.0",
