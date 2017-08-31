@@ -1,4 +1,10 @@
-/* global emit */
+// These eslint directives prevent the linter from complaining about the use of
+// globals or arguments that will be prevent in CouchDB design doc functions
+// such as views or validate_doc_update
+
+/* global emit, doc, newDoc, oldDoc, userCtx, secObj */
+/*eslint no-unused-vars: ["error", { "vars": "local", "argsIgnorePattern": "doc|newDoc|oldDoc|userCtx|secObj" }]*/
+
 
 "use strict";
 

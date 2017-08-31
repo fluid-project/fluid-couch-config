@@ -24,13 +24,44 @@ fluid.defaults("sjrk.server.couchConfig.db", {
     },
     invokers: {
         ensureDBExists: {
-            funcName: "sjrk.server.couchConfig.ensureDBExists",
+            funcName: "sjrk.server.couchConfig.db.ensureDBExists",
             args: ["{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDBExists"]
         }
     }
 });
 
+sjrk.server.couchConfig.db.ensureDBExists = function (couchURL, dbName, completionEvent) {
+    console.log("Making sure DB " + dbName + " exists in Couch instance at " + couchURL);
+    var nano = require("nano")(couchURL);
+    nano.db.get(dbName, function (err, body) {
+        if (!err) {
+            console.log("DB " + dbName + " exists");
+            completionEvent.fire();
+        } else {
+            if (err.statusCode === 404) {
+                console.log("DB does not exist, trying to create");
+                nano.db.create(dbName, function (err, body) {
+                    if (!err) {
+                        console.log("DB " + dbName + " created");
+                        completionEvent.fire();
+                    } else {
+                        console.log("DB " + dbName + " could not be created");
+                        console.log(err, body);
+                    }
+                });
+            } else {
+                console.log("Could not get information about DB " + dbName);
+                console.log(err, body);
+            }
+
+        }
+    });
+};
+
 fluid.defaults("sjrk.server.couchConfig.documents", {
+    dbConfig: {
+        // dbName: "targetDB",
+    },
     gradeNames: ["sjrk.server.couchConfig.base"],
     // Ensure one or more documents exist; key will be used as the document _id
     dbDocuments: {
@@ -41,68 +72,13 @@ fluid.defaults("sjrk.server.couchConfig.documents", {
     },
     invokers: {
         updateDocuments: {
-            funcName: "sjrk.server.couchConfig.updateDocuments",
+            funcName: "sjrk.server.couchConfig.documents.updateDocuments",
             args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName"]
         }
     }
 });
 
-fluid.defaults("sjrk.server.couchConfig.designDocument", {
-    gradeNames: ["sjrk.server.couchConfig.base"],
-    events: {
-        // Fired after the design document is updated
-        // necessary for making sure documents aren't pushed before a
-        // validation function is in place
-        onDesignDocUpdated: null
-    },
-    invokers: {
-        generateViews: {
-            funcName: "sjrk.server.couchConfig.generateViews",
-            args: ["{that}.options.dbViews"]
-        },
-        updateDesignDoc: {
-            funcName: "sjrk.server.couchConfig.updateDesignDoc",
-            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
-        }
-    },
-    dbConfig: {
-        // designDocName: "views"
-    },
-    // map / reduce can be a function reference or a
-    // function name as string. CouchDB's internal
-    // reduce functions (_sum, _count, and _stats) can also
-    // be used by name as strings in the reduce key
-    dbViews: {
-        // count: {
-        //     map: "sjrk.server.couchConfig.countMapFunction",
-        //     reduce: "_count"
-        // }
-    },
-    // Supply a validation function to be mapped to validate_doc_update in the
-    // design document
-    dbValidate: {
-        // validateFunction: "sjrk.server.couchConfig.validateFunction"
-    }
-});
-
-// Convenience grade that calls all the configuration functions at instantiation
-fluid.defaults("sjrk.server.couchConfig.auto", {
-    gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
-    listeners: {
-        "onCreate.ensureDBExists": {
-            func: "{that}.ensureDBExists"
-        },
-        "onDBExists.updateDesignDoc": {
-            func: "{that}.updateDesignDoc"
-        },
-        "onDesignDocUpdated.updateDocuments": {
-            func: "{that}.updateDocuments"
-        }
-
-    }
-});
-
-sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName) {
+sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchURL, dbName) {
     if (isEqual(documents, {})) {
         console.log("No documents to update");
         return;
@@ -157,35 +133,46 @@ sjrk.server.couchConfig.updateDocuments = function (documents, couchURL, dbName)
     });
 };
 
-sjrk.server.couchConfig.ensureDBExists = function (couchURL, dbName, completionEvent) {
-    console.log("Making sure DB " + dbName + " exists in Couch instance at " + couchURL);
-    var nano = require("nano")(couchURL);
-    nano.db.get(dbName, function (err, body) {
-        if (!err) {
-            console.log("DB " + dbName + " exists");
-            completionEvent.fire();
-        } else {
-            if (err.statusCode === 404) {
-                console.log("DB does not exist, trying to create");
-                nano.db.create(dbName, function (err, body) {
-                    if (!err) {
-                        console.log("DB " + dbName + " created");
-                        completionEvent.fire();
-                    } else {
-                        console.log("DB " + dbName + " could not be created");
-                        console.log(err, body);
-                    }
-                });
-            } else {
-                console.log("Could not get information about DB " + dbName);
-                console.log(err, body);
-            }
-
+fluid.defaults("sjrk.server.couchConfig.designDocument", {
+    gradeNames: ["sjrk.server.couchConfig.base"],
+    events: {
+        // Fired after the design document is updated
+        // necessary for making sure documents aren't pushed before a
+        // validation function is in place
+        onDesignDocUpdated: null
+    },
+    invokers: {
+        generateViews: {
+            funcName: "sjrk.server.couchConfig.designDocument.generateViews",
+            args: ["{that}.options.dbViews"]
+        },
+        updateDesignDoc: {
+            funcName: "sjrk.server.couchConfig.designDocument.updateDesignDoc",
+            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
         }
-    });
-};
+    },
+    dbConfig: {
+        // dbName: "targetDB",
+        // designDocName: "views"
+    },
+    // map / reduce can be a function reference or a
+    // function name as string. CouchDB's internal
+    // reduce functions (_sum, _count, and _stats) can also
+    // be used by name as strings in the reduce key
+    dbViews: {
+        // count: {
+        //     map: "sjrk.server.couchConfig.countMapFunction",
+        //     reduce: "_count"
+        // }
+    },
+    // Supply a validation function to be mapped to validate_doc_update in the
+    // design document
+    dbValidate: {
+        // validateFunction: "sjrk.server.couchConfig.validateFunction"
+    }
+});
 
-sjrk.server.couchConfig.generateViews = function (viewsObj) {
+sjrk.server.couchConfig.designDocument.generateViews = function (viewsObj) {
     var transformedView = fluid.transform(viewsObj, function (desiredView) {
         var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey) {
             // The internal CouchDB reduce functions
@@ -208,7 +195,7 @@ sjrk.server.couchConfig.generateViews = function (viewsObj) {
 };
 
 // Generates a base design document
-sjrk.server.couchConfig.getBaseDesignDocument = function (designDocName) {
+sjrk.server.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
     return {
         _id: "_design/" + designDocName,
         views: {},
@@ -216,7 +203,7 @@ sjrk.server.couchConfig.getBaseDesignDocument = function (designDocName) {
     };
 };
 
-sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunction, couchURL, dbName, designDocName, completionEvent) {
+sjrk.server.couchConfig.designDocument.updateDesignDoc = function (generatedViews, validateFunction, couchURL, dbName, designDocName, completionEvent) {
 
     var designDocObj = {};
 
@@ -284,7 +271,7 @@ sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunc
         // Design document does not exist
         } else {
             console.log("Design document not found, creating");
-            designDoc = sjrk.server.couchConfig.getBaseDesignDocument(designDocName);
+            designDoc = sjrk.server.couchConfig.designDocument.getBaseDesignDocument(designDocName);
 
             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
                 designDoc[designDocItemKey] = designDocItem;
@@ -304,3 +291,21 @@ sjrk.server.couchConfig.updateDesignDoc = function (generatedViews, validateFunc
     });
 
 };
+
+// Convenience grade that calls all the configuration functions at instantiation,
+// in an appropriate order
+fluid.defaults("sjrk.server.couchConfig.auto", {
+    gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
+    listeners: {
+        "onCreate.ensureDBExists": {
+            func: "{that}.ensureDBExists"
+        },
+        "onDBExists.updateDesignDoc": {
+            func: "{that}.updateDesignDoc"
+        },
+        "onDesignDocUpdated.updateDocuments": {
+            func: "{that}.updateDocuments"
+        }
+
+    }
+});
