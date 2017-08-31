@@ -2,8 +2,8 @@
 // globals or arguments that will be prevent in CouchDB design doc functions
 // such as views or validate_doc_update
 
-/* global emit, doc, newDoc, oldDoc, userCtx, secObj */
-/*eslint no-unused-vars: ["error", { "vars": "local", "argsIgnorePattern": "doc|newDoc|oldDoc|userCtx|secObj" }]*/
+/* global emit, doc, newDoc, oldDoc, userCtx, secObj, sum, rereduce */
+/*eslint no-unused-vars: ["error", { "vars": "local", "argsIgnorePattern": "rereduce|doc|newDoc|oldDoc|userCtx|secObj" }]*/
 
 
 "use strict";
@@ -22,24 +22,28 @@ fluid.defaults("sjrk.server.couchConfig.example", {
     dbDocuments: {
         "test1": {
             "message": "Hello, World!",
-            "tags": ["Hello", "World", "test"],
+            "tags": ["hello", "world", "test"],
             "type": "message"
         },
         "test2": {
             "message": "Goodbye, World!",
-            "tags": ["Goodbye", "World"],
+            "tags": ["goodbye", "world", "test"],
             "type": "message"
         },
         // This document will fail to be updated/inserted due to the
         // validation function
         "test3": {
             "message": "I don't have a 'type' field.",
-            "tags": ["Invalid"]
+            "tags": ["invalid", "test"]
         }
     },
     dbViews: {
-        "tags": {
-            "map": "sjrk.server.couchConfig.example.tagsMapFunction"
+        "docIdsWithMessages": {
+            "map": "sjrk.server.couchConfig.example.docIdsWithMessagesMapFunction"
+        },
+        "tagCount": {
+            "map": "sjrk.server.couchConfig.example.tagCountMapFunction",
+            "reduce": "sjrk.server.couchConfig.example.tagCountReduceFunction"
         }
     },
     dbValidate: {
@@ -47,10 +51,22 @@ fluid.defaults("sjrk.server.couchConfig.example", {
     }
 });
 
-sjrk.server.couchConfig.example.tagsMapFunction = function (doc) {
-    emit("tags", doc.tags);
+sjrk.server.couchConfig.example.docIdsWithMessagesMapFunction = function (doc) {
+    emit(doc._id, doc.message);
 };
 
+sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
+    if (doc.tags.length > 0) {
+        for (var idx in doc.tags) {
+            emit(doc.tags[idx], 1);
+        }
+    }
+};
+
+// http://localhost:5984/test/_design/views/_view/tagCount?group=true
+sjrk.server.couchConfig.example.tagCountReduceFunction = function (keys, values, rerereduce) {
+    return sum(values);
+};
 
 sjrk.server.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
     if (!newDoc.type) {

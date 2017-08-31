@@ -142,13 +142,9 @@ fluid.defaults("sjrk.server.couchConfig.designDocument", {
         onDesignDocUpdated: null
     },
     invokers: {
-        generateViews: {
-            funcName: "sjrk.server.couchConfig.designDocument.generateViews",
-            args: ["{that}.options.dbViews"]
-        },
         updateDesignDoc: {
             funcName: "sjrk.server.couchConfig.designDocument.updateDesignDoc",
-            args: ["@expand:{that}.generateViews()", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
+            args: ["{that}.options.dbViews", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
         }
     },
     dbConfig: {
@@ -203,9 +199,11 @@ sjrk.server.couchConfig.designDocument.getBaseDesignDocument = function (designD
     };
 };
 
-sjrk.server.couchConfig.designDocument.updateDesignDoc = function (generatedViews, validateFunction, couchURL, dbName, designDocName, completionEvent) {
+sjrk.server.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
 
     var designDocObj = {};
+
+    var generatedViews = sjrk.server.couchConfig.designDocument.generateViews(viewsObj);
 
     if (!isEqual(generatedViews, {})) {
         designDocObj.views = generatedViews;
