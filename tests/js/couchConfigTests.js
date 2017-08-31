@@ -9,10 +9,14 @@ https://raw.githubusercontent.com/BlueSlug/couch-config/master/LICENSE.txt
 
 /* global fluid */
 
+"use strict";
+
 var fluid = require("infusion");
+
 var sjrk  = fluid.registerNamespace("sjrk");
 
 var gpii  = fluid.registerNamespace("gpii");
+
 require("gpii-pouchdb");
 gpii.pouch.loadTestingSupport();
 
@@ -124,5 +128,4 @@ sjrk.server.couchConfigTest.log = function (message) {
     console.log(message);
 };
 
-//sjrk.server.couchConfigTest();
 fluid.test.runTests("sjrk.server.couchConfigTest");
