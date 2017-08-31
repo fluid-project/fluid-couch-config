@@ -11,7 +11,7 @@
 var fluid = require("infusion");
 
 var sjrk = fluid.registerNamespace("sjrk");
-require("../src/couchConfig");
+require("../../src/couchConfig");
 
 fluid.defaults("sjrk.server.couchConfig.example", {
     gradeNames: ["sjrk.server.couchConfig.auto"],

@@ -293,7 +293,8 @@ sjrk.server.couchConfig.designDocument.updateDesignDoc = function (generatedView
 };
 
 // Convenience grade that calls all the configuration functions at instantiation,
-// in an appropriate order
+// in an appropriate order - intended to set up an application's initial
+// configuration in one go
 fluid.defaults("sjrk.server.couchConfig.auto", {
     gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
     listeners: {
