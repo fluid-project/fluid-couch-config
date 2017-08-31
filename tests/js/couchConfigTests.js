@@ -7,12 +7,16 @@ You may obtain a copy of the ECL 2.0 License and BSD License at
 https://raw.githubusercontent.com/BlueSlug/couch-config/master/LICENSE.txt
 */
 
-/* global fluid, sjrk, jqUnit */
+/* global fluid */
+
+"use strict";
 
 var fluid = require("infusion");
+
 var sjrk  = fluid.registerNamespace("sjrk");
 
 var gpii  = fluid.registerNamespace("gpii");
+
 require("gpii-pouchdb");
 gpii.pouch.loadTestingSupport();
 
@@ -74,7 +78,6 @@ fluid.defaults("sjrk.server.couchConfigTest", {
 
 sjrk.server.couchConfigTest.log = function (message) {
     console.log(message);
-}
+};
 
-//sjrk.server.couchConfigTest();
 fluid.test.runTests("sjrk.server.couchConfigTest");
