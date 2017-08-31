@@ -21,25 +21,25 @@ fluid.defaults("sjrk.server.couchConfig.example", {
     },
     dbDocuments: {
         "test1": {
-            "message": "Hello, World!",
+            "title": "Hello, World!",
             "tags": ["hello", "world", "test"],
-            "type": "message"
+            "type": "post"
         },
         "test2": {
-            "message": "Goodbye, World!",
+            "title": "Goodbye, World!",
             "tags": ["goodbye", "world", "test"],
-            "type": "message"
+            "type": "post"
         },
         // This document will fail to be updated/inserted due to the
         // validation function
         "test3": {
-            "message": "I don't have a 'type' field.",
+            "title": "I don't have a 'type' field. I'm going to fail validation.",
             "tags": ["invalid", "test"]
         }
     },
     dbViews: {
-        "docIdsWithMessages": {
-            "map": "sjrk.server.couchConfig.example.docIdsWithMessagesMapFunction"
+        "docIdsWithTitles": {
+            "map": "sjrk.server.couchConfig.example.docIdsWithTitlesMapFunction"
         },
         "tagCount": {
             "map": "sjrk.server.couchConfig.example.tagCountMapFunction",
@@ -51,10 +51,11 @@ fluid.defaults("sjrk.server.couchConfig.example", {
     }
 });
 
-sjrk.server.couchConfig.example.docIdsWithMessagesMapFunction = function (doc) {
-    emit(doc._id, doc.message);
+sjrk.server.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
+    emit(doc._id, doc.title);
 };
 
+// http://localhost:5984/test/_design/views/_view/tagCount?group=true
 sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
     if (doc.tags.length > 0) {
         for (var idx in doc.tags) {
@@ -63,7 +64,7 @@ sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
     }
 };
 
-// http://localhost:5984/test/_design/views/_view/tagCount?group=true
+
 sjrk.server.couchConfig.example.tagCountReduceFunction = function (keys, values, rerereduce) {
     return sum(values);
 };
