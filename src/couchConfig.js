@@ -2,6 +2,7 @@
 
 var fluid = require("infusion");
 var isEqual = require("underscore").isEqual;
+var size = require("underscore").size;
 
 var sjrk = fluid.registerNamespace("sjrk");
 
@@ -70,19 +71,49 @@ fluid.defaults("sjrk.server.couchConfig.documents", {
         //     "tags": ["Hello", "World", "test"]
         // }
     },
+    members: {
+        totalDocuments: {
+            expander: {
+                func: "sjrk.server.couchConfig.documents.getTotalDocuments",
+                args: "{that}.options.dbDocuments"
+            }
+        },
+        processedDocuments: 0
+    },
     events: {
         // Fired after the documents are updated
         // necessary for making sure documents aren't pushed before a
         // validation function is in place
-        onDocsUpdated: null
+        onDocsUpdated: null,
+        onDocumentProcessed: null
+    },
+    listeners: {
+        onDocumentProcessed: {
+            func: "sjrk.server.couchConfig.documents.handleOnDocumentProcessed",
+            args: ["{that}", "{that}.events.onDocsUpdated"]
+        }
     },
     invokers: {
         updateDocuments: {
             funcName: "sjrk.server.couchConfig.documents.updateDocuments",
-            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDocsUpdated"]
+            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDocumentProcessed"]
         }
     }
 });
+
+sjrk.server.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
+    return size(dbDocuments);
+};
+
+sjrk.server.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
+    that.processedDocuments = that.processedDocuments +1;
+
+    // Document processing complete
+    if (that.processedDocuments === that.totalDocuments) {
+        that.processedDocuments = 0;
+        completionEvent.fire();
+    }
+};
 
 sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchURL, dbName, completionEvent) {
     if (isEqual(documents, {})) {
@@ -121,6 +152,7 @@ sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchUR
                     if (err) {
                         console.log("Update of document " + id + " could not be inserted");
                         console.log(err, body);
+                        completionEvent.fire();
                     }
                 });
             }
@@ -135,6 +167,7 @@ sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchUR
                     if (err) {
                         console.log("Document " + id + " could not be inserted");
                         console.log(err, body);
+                        completionEvent.fire();
                     }
                 });
             }

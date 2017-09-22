@@ -38,6 +38,11 @@ fluid.defaults("sjrk.server.testCouchConfig", {
             "type": "test",
             "key": "value",
             "arrayKey": ["values", "in", "an", "array"]
+        },
+        testDoc2: {
+            "type": "test",
+            "key": "value2",
+            "arrayKey": ["values", "in", "an", "array"]
         }
     },
     dbViews: {
@@ -72,7 +77,7 @@ fluid.defaults("sjrk.server.couchConfigTester", {
         },
         {
             name: "Test CouchDB document loading",
-            expect: 4,
+            expect: 5,
             sequence: [{
                 "func": "{couchConfigTest}.couchConfig.ensureDBExists"
             },
@@ -81,9 +86,13 @@ fluid.defaults("sjrk.server.couchConfigTester", {
                 "listener": "{couchConfigTest}.couchConfig.updateDocuments"
             },
             {
+                "func": "jqUnit.assertEquals",
+                "args": ["Total documents count is expected number", 2, "{couchConfigTest}.couchConfig.totalDocuments"]
+            },
+            {
                 "event": "{couchConfig}.events.onDocsUpdated",
                 "listener": "jqUnit.assert",
-                args: ["Database document was created/updated successfully"]
+                args: ["Database documents were created/updated successfully"]
             },
             {
                 "func": "sjrk.server.couchConfigTester.testDbDocument",
