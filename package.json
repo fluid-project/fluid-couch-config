@@ -1,10 +1,10 @@
 {
-  "name": "sjrk-couch-config",
+  "name": "fluid-couch-config",
   "version": "0.0.1",
   "description": "Declarative CouchDB configs using Infusion",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/js/couchConfigTests.js"
   },
   "repository": {
     "type": "git",
