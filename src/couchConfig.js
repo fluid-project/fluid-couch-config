@@ -13,17 +13,15 @@ var fluid = require("infusion");
 var isEqual = require("underscore").isEqual;
 var size = require("underscore").size;
 
-var sjrk = fluid.registerNamespace("sjrk");
-
-fluid.defaults("sjrk.server.couchConfig.base", {
+fluid.defaults("fluid.server.couchConfig.base", {
     gradeNames: ["fluid.component"],
     dbConfig: {
         couchURL: "http://localhost:5984"
     }
 });
 
-fluid.defaults("sjrk.server.couchConfig.db", {
-    gradeNames: ["sjrk.server.couchConfig.base"],
+fluid.defaults("fluid.server.couchConfig.db", {
+    gradeNames: ["fluid.server.couchConfig.base"],
     dbConfig: {
         // dbName: "targetDB",
     },
@@ -34,13 +32,13 @@ fluid.defaults("sjrk.server.couchConfig.db", {
     },
     invokers: {
         ensureDBExists: {
-            funcName: "sjrk.server.couchConfig.db.ensureDBExists",
+            funcName: "fluid.server.couchConfig.db.ensureDBExists",
             args: ["{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDBExists"]
         }
     }
 });
 
-sjrk.server.couchConfig.db.ensureDBExists = function (couchURL, dbName, completionEvent) {
+fluid.server.couchConfig.db.ensureDBExists = function (couchURL, dbName, completionEvent) {
     console.log("Making sure DB " + dbName + " exists in Couch instance at " + couchURL);
     var nano = require("nano")(couchURL);
     nano.db.get(dbName, function (err, body) {
@@ -68,11 +66,11 @@ sjrk.server.couchConfig.db.ensureDBExists = function (couchURL, dbName, completi
     });
 };
 
-fluid.defaults("sjrk.server.couchConfig.documents", {
+fluid.defaults("fluid.server.couchConfig.documents", {
     dbConfig: {
         // dbName: "targetDB",
     },
-    gradeNames: ["sjrk.server.couchConfig.base"],
+    gradeNames: ["fluid.server.couchConfig.base"],
     // Ensure one or more documents exist; key will be used as the document _id
     dbDocuments: {
         // "test1": {
@@ -83,7 +81,7 @@ fluid.defaults("sjrk.server.couchConfig.documents", {
     members: {
         totalDocuments: {
             expander: {
-                func: "sjrk.server.couchConfig.documents.getTotalDocuments",
+                func: "fluid.server.couchConfig.documents.getTotalDocuments",
                 args: "{that}.options.dbDocuments"
             }
         },
@@ -98,23 +96,23 @@ fluid.defaults("sjrk.server.couchConfig.documents", {
     },
     listeners: {
         onDocumentProcessed: {
-            func: "sjrk.server.couchConfig.documents.handleOnDocumentProcessed",
+            func: "fluid.server.couchConfig.documents.handleOnDocumentProcessed",
             args: ["{that}", "{that}.events.onDocsUpdated"]
         }
     },
     invokers: {
         updateDocuments: {
-            funcName: "sjrk.server.couchConfig.documents.updateDocuments",
+            funcName: "fluid.server.couchConfig.documents.updateDocuments",
             args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDocumentProcessed"]
         }
     }
 });
 
-sjrk.server.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
+fluid.server.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
     return size(dbDocuments);
 };
 
-sjrk.server.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
+fluid.server.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
     that.processedDocuments = that.processedDocuments +1;
 
     // Document processing complete
@@ -124,7 +122,7 @@ sjrk.server.couchConfig.documents.handleOnDocumentProcessed = function (that, co
     }
 };
 
-sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchURL, dbName, completionEvent) {
+fluid.server.couchConfig.documents.updateDocuments = function (documents, couchURL, dbName, completionEvent) {
     if (isEqual(documents, {})) {
         console.log("No documents to update");
         return;
@@ -184,8 +182,8 @@ sjrk.server.couchConfig.documents.updateDocuments = function (documents, couchUR
     });
 };
 
-fluid.defaults("sjrk.server.couchConfig.designDocument", {
-    gradeNames: ["sjrk.server.couchConfig.base"],
+fluid.defaults("fluid.server.couchConfig.designDocument", {
+    gradeNames: ["fluid.server.couchConfig.base"],
     events: {
         // Fired after the design document is updated
         // necessary for making sure documents aren't pushed before a
@@ -194,7 +192,7 @@ fluid.defaults("sjrk.server.couchConfig.designDocument", {
     },
     invokers: {
         updateDesignDoc: {
-            funcName: "sjrk.server.couchConfig.designDocument.updateDesignDoc",
+            funcName: "fluid.server.couchConfig.designDocument.updateDesignDoc",
             args: ["{that}.options.dbViews", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
         }
     },
@@ -208,18 +206,18 @@ fluid.defaults("sjrk.server.couchConfig.designDocument", {
     // be used by name as strings in the reduce key
     dbViews: {
         // count: {
-        //     map: "sjrk.server.couchConfig.countMapFunction",
+        //     map: "fluid.server.couchConfig.countMapFunction",
         //     reduce: "_count"
         // }
     },
     // Supply a validation function to be mapped to validate_doc_update in the
     // design document
     dbValidate: {
-        // validateFunction: "sjrk.server.couchConfig.validateFunction"
+        // validateFunction: "fluid.server.couchConfig.validateFunction"
     }
 });
 
-sjrk.server.couchConfig.designDocument.generateViews = function (viewsObj) {
+fluid.server.couchConfig.designDocument.generateViews = function (viewsObj) {
     var transformedView = fluid.transform(viewsObj, function (desiredView) {
         var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey) {
             // The internal CouchDB reduce functions
@@ -242,7 +240,7 @@ sjrk.server.couchConfig.designDocument.generateViews = function (viewsObj) {
 };
 
 // Generates a base design document
-sjrk.server.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
+fluid.server.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
     return {
         _id: "_design/" + designDocName,
         views: {},
@@ -250,11 +248,11 @@ sjrk.server.couchConfig.designDocument.getBaseDesignDocument = function (designD
     };
 };
 
-sjrk.server.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
+fluid.server.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
 
     var designDocObj = {};
 
-    var generatedViews = sjrk.server.couchConfig.designDocument.generateViews(viewsObj);
+    var generatedViews = fluid.server.couchConfig.designDocument.generateViews(viewsObj);
 
     if (!isEqual(generatedViews, {})) {
         designDocObj.views = generatedViews;
@@ -320,7 +318,7 @@ sjrk.server.couchConfig.designDocument.updateDesignDoc = function (viewsObj, val
         // Design document does not exist
         } else {
             console.log("Design document not found, creating");
-            designDoc = sjrk.server.couchConfig.designDocument.getBaseDesignDocument(designDocName);
+            designDoc = fluid.server.couchConfig.designDocument.getBaseDesignDocument(designDocName);
 
             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
                 designDoc[designDocItemKey] = designDocItem;
@@ -344,8 +342,8 @@ sjrk.server.couchConfig.designDocument.updateDesignDoc = function (viewsObj, val
 // Convenience grade that calls all the configuration functions at instantiation,
 // in an appropriate order - intended to set up an application's initial
 // configuration in one go
-fluid.defaults("sjrk.server.couchConfig.auto", {
-    gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
+fluid.defaults("fluid.server.couchConfig.auto", {
+    gradeNames: ["fluid.server.couchConfig.db", "fluid.server.couchConfig.documents", "fluid.server.couchConfig.designDocument"],
     listeners: {
         "onCreate.ensureDBExists": {
             func: "{that}.ensureDBExists"

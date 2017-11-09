@@ -13,8 +13,6 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 
 var fluid = require("infusion");
 
-var sjrk  = fluid.registerNamespace("sjrk");
-
 var gpii  = fluid.registerNamespace("gpii");
 
 require("gpii-pouchdb");
@@ -26,8 +24,8 @@ require("../../src/couchConfig");
 
 "use strict";
 
-fluid.defaults("sjrk.server.testCouchConfig", {
-    gradeNames: ["sjrk.server.couchConfig.db", "sjrk.server.couchConfig.documents", "sjrk.server.couchConfig.designDocument"],
+fluid.defaults("fluid.server.testCouchConfig", {
+    gradeNames: ["fluid.server.couchConfig.db", "fluid.server.couchConfig.documents", "fluid.server.couchConfig.designDocument"],
     dbConfig: {
         couchURL: "http://localhost:6789",
         dbName: "testDbForTests",
@@ -47,16 +45,16 @@ fluid.defaults("sjrk.server.testCouchConfig", {
     },
     dbViews: {
         test: {
-            map: "sjrk.server.couchConfigTester.testMapFunction",
-            reduce: "sjrk.server.couchConfigTester.testReduceFunction"
+            map: "fluid.server.couchConfigTester.testMapFunction",
+            reduce: "fluid.server.couchConfigTester.testReduceFunction"
         }
     },
     dbValidate: {
-        validateFunction: "sjrk.server.couchConfigTester.testValidateFunction"
+        validateFunction: "fluid.server.couchConfigTester.testValidateFunction"
     }
 });
 
-fluid.defaults("sjrk.server.couchConfigTester", {
+fluid.defaults("fluid.server.couchConfigTester", {
     gradeNames: ["fluid.test.testCaseHolder"],
     events: {
         nanoCallBackDone: null
@@ -95,7 +93,7 @@ fluid.defaults("sjrk.server.couchConfigTester", {
                 args: ["Database documents were created/updated successfully"]
             },
             {
-                "func": "sjrk.server.couchConfigTester.testDbDocument",
+                "func": "fluid.server.couchConfigTester.testDbDocument",
                 args: ["{couchConfigTest}.couchConfig.options.dbConfig.dbName",
                     "{couchConfigTest}.couchConfig.options.dbConfig.couchURL",
                     "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
@@ -123,7 +121,7 @@ fluid.defaults("sjrk.server.couchConfigTester", {
                 args: ["Database design document was created/updated successfully"]
             },
             {
-                "func": "sjrk.server.couchConfigTester.testDbView",
+                "func": "fluid.server.couchConfigTester.testDbView",
                 args: ["{couchConfigTest}.couchConfig.options.dbConfig.dbName",
                     "{couchConfigTest}.couchConfig.options.dbConfig.couchURL",
                     "{couchConfigTest}.couchConfig.options.dbViews.test",
@@ -140,25 +138,25 @@ fluid.defaults("sjrk.server.couchConfigTester", {
 });
 
 // A basic validation that checks the document to make sure its 'type' is 'test'
-sjrk.server.couchConfigTester.testValidateFunction = function (newDoc, oldDoc, userCtx) {
+fluid.server.couchConfigTester.testValidateFunction = function (newDoc, oldDoc, userCtx) {
     if (!newDoc.type || newDoc.type !== "test") {
         throw ({forbidden: "It's not a test document"});
     }
 };
 
 // A basic map function that lists all keys
-sjrk.server.couchConfigTester.testMapFunction = function (doc) {
+fluid.server.couchConfigTester.testMapFunction = function (doc) {
     if (doc.key) {
         emit(doc.key, null);
     }
 };
 
 // A basic reduce function that sums the values
-sjrk.server.couchConfigTester.testReduceFunction = function (keys, values, rerereduce) {
+fluid.server.couchConfigTester.testReduceFunction = function (keys, values, rerereduce) {
     return sum(values);
 };
 
-sjrk.server.couchConfigTester.testDbDocument = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+fluid.server.couchConfigTester.testDbDocument = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
@@ -172,7 +170,7 @@ sjrk.server.couchConfigTester.testDbDocument = function (dbName, couchUrl, expec
     });
 };
 
-sjrk.server.couchConfigTester.testDbView = function (dbName, couchUrl, expectedView, expectedValidateFunction, completionEvent) {
+fluid.server.couchConfigTester.testDbView = function (dbName, couchUrl, expectedView, expectedValidateFunction, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
@@ -180,16 +178,16 @@ sjrk.server.couchConfigTester.testDbView = function (dbName, couchUrl, expectedV
         if (!err) {
             var expectedMapFunction = expectedView.map;
             var expectedReduceFunction = expectedView.reduce;
-            sjrk.server.couchConfigTester.compareFunctions("The actual view map function is the same as expected", expectedMapFunction, actualDesignDoc.views.test.map);
-            sjrk.server.couchConfigTester.compareFunctions("The actual view reduce function is the same as expected", expectedReduceFunction, actualDesignDoc.views.test.reduce);
-            sjrk.server.couchConfigTester.compareFunctions("The actual validate function is the same as expected", expectedValidateFunction, actualDesignDoc.validate_doc_update);
+            fluid.server.couchConfigTester.compareFunctions("The actual view map function is the same as expected", expectedMapFunction, actualDesignDoc.views.test.map);
+            fluid.server.couchConfigTester.compareFunctions("The actual view reduce function is the same as expected", expectedReduceFunction, actualDesignDoc.views.test.reduce);
+            fluid.server.couchConfigTester.compareFunctions("The actual validate function is the same as expected", expectedValidateFunction, actualDesignDoc.validate_doc_update);
         }
 
         completionEvent.fire();
     });
 };
 
-sjrk.server.couchConfigTester.compareFunctions = function (message, expectedFunction, actualFunction) {
+fluid.server.couchConfigTester.compareFunctions = function (message, expectedFunction, actualFunction) {
     //calling toString makes the line breaks \n's instead of whatever they were before
     var expectedFunctionBody = fluid.getGlobalValue(expectedFunction).toString();
     var actualFunctionBody = actualFunction.toString();
@@ -197,16 +195,16 @@ sjrk.server.couchConfigTester.compareFunctions = function (message, expectedFunc
     jqUnit.assertEquals(message, expectedFunctionBody, actualFunctionBody);
 };
 
-fluid.defaults("sjrk.server.couchConfigTest", {
+fluid.defaults("fluid.server.couchConfigTest", {
     gradeNames: ["gpii.test.pouch.environment"],
     port: 6789,
     components: {
         couchConfig: {
-            type: "sjrk.server.testCouchConfig",
+            type: "fluid.server.testCouchConfig",
             createOnEvent: "{couchConfigTester}.events.onTestCaseStart"
         },
         couchConfigTester: {
-            type: "sjrk.server.couchConfigTester"
+            type: "fluid.server.couchConfigTester"
         }
     },
     listeners: {
@@ -216,8 +214,8 @@ fluid.defaults("sjrk.server.couchConfigTest", {
     }
 });
 
-sjrk.server.couchConfigTest.log = function (message) {
+fluid.server.couchConfigTest.log = function (message) {
     console.log(message);
 };
 
-fluid.test.runTests("sjrk.server.couchConfigTest");
+fluid.test.runTests("fluid.server.couchConfigTest");
