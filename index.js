@@ -14,5 +14,5 @@ var fluid = require("infusion");
 
 require("./src/couchConfig");
 
-// Register our content so that it can be referenced in other packages using `fluid.module.resolvePath("%gpii-binder/path/to/content")`
-fluid.module.register("couch-config", __dirname, require);
+// Register our content so that it can be referenced in other packages using `fluid.module.resolvePath("%fluid-couch-config/path/to/content")`
+fluid.module.register("fluid-couch-config", __dirname, require);
