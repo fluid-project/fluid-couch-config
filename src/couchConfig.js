@@ -336,7 +336,6 @@ fluid.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateF
             });
         }
     });
-
 };
 
 // Convenience grade that calls all the configuration functions at instantiation,
@@ -354,6 +353,5 @@ fluid.defaults("fluid.couchConfig.auto", {
         "onDesignDocUpdated.updateDocuments": {
             func: "{that}.updateDocuments"
         }
-
     }
 });
