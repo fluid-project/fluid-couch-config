@@ -21,4 +21,4 @@ Uses the official CouchDB Node library, [Nano](https://github.com/apache/couchdb
 
 ## Usage
 
-See `examples/couchConfigBasic.js` for an example of usage.
+See [`examples/js/couchConfigBasic.js`](examples/js/couchConfigBasic.js) for an example of usage.

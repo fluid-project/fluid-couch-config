@@ -1,10 +1,13 @@
-// These eslint directives prevent the linter from complaining about the use of
-// globals or arguments that will be prevent in CouchDB design doc functions
-// such as views or validate_doc_update
+/*
+Copyright 2017 OCAD University
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENSE.txt
+*/
 
-/* global emit, doc, newDoc, oldDoc, userCtx, secObj, sum, rereduce */
-/*eslint no-unused-vars: ["error", { "vars": "local", "argsIgnorePattern": "rereduce|doc|newDoc|oldDoc|userCtx|secObj" }]*/
-
+/* global emit, sum */
 
 "use strict";
 
@@ -64,11 +67,12 @@ sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
     }
 };
 
-
+// eslint-disable-next-line no-unused-vars
 sjrk.server.couchConfig.example.tagCountReduceFunction = function (keys, values, rerereduce) {
     return sum(values);
 };
 
+// eslint-disable-next-line no-unused-vars
 sjrk.server.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
     if (!newDoc.type) {
         throw ({forbidden: "doc.type is required"});
