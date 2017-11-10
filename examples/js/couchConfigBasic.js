@@ -12,8 +12,8 @@ var fluid = require("infusion");
 
 require("../../src/couchConfig");
 
-fluid.defaults("fluid.server.couchConfig.example", {
-    gradeNames: ["fluid.server.couchConfig.auto"],
+fluid.defaults("fluid.couchConfig.example", {
+    gradeNames: ["fluid.couchConfig.auto"],
     dbConfig: {
         dbName: "test",
         designDocName: "views"
@@ -38,24 +38,24 @@ fluid.defaults("fluid.server.couchConfig.example", {
     },
     dbViews: {
         "docIdsWithTitles": {
-            "map": "fluid.server.couchConfig.example.docIdsWithTitlesMapFunction"
+            "map": "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
         },
         "tagCount": {
-            "map": "fluid.server.couchConfig.example.tagCountMapFunction",
-            "reduce": "fluid.server.couchConfig.example.tagCountReduceFunction"
+            "map": "fluid.couchConfig.example.tagCountMapFunction",
+            "reduce": "fluid.couchConfig.example.tagCountReduceFunction"
         }
     },
     dbValidate: {
-        validateFunction: "fluid.server.couchConfig.example.validateFunction"
+        validateFunction: "fluid.couchConfig.example.validateFunction"
     }
 });
 
-fluid.server.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
+fluid.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
     emit(doc._id, doc.title);
 };
 
 // http://localhost:5984/test/_design/views/_view/tagCount?group=true
-fluid.server.couchConfig.example.tagCountMapFunction = function (doc) {
+fluid.couchConfig.example.tagCountMapFunction = function (doc) {
     if (doc.tags.length > 0) {
         for (var idx in doc.tags) {
             emit(doc.tags[idx], 1);
@@ -64,14 +64,14 @@ fluid.server.couchConfig.example.tagCountMapFunction = function (doc) {
 };
 
 
-fluid.server.couchConfig.example.tagCountReduceFunction = function (keys, values, rerereduce) {
+fluid.couchConfig.example.tagCountReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 
-fluid.server.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
+fluid.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
     if (!newDoc.type) {
         throw ({forbidden: "doc.type is required"});
     }
 };
 
-fluid.server.couchConfig.example();
+fluid.couchConfig.example();
