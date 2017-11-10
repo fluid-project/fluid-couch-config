@@ -13,11 +13,10 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 
 var fluid = require("infusion");
 
-var sjrk = fluid.registerNamespace("sjrk");
 require("../../src/couchConfig");
 
-fluid.defaults("sjrk.server.couchConfig.example", {
-    gradeNames: ["sjrk.server.couchConfig.auto"],
+fluid.defaults("fluid.couchConfig.example", {
+    gradeNames: ["fluid.couchConfig.auto"],
     dbConfig: {
         dbName: "test",
         designDocName: "views"
@@ -42,24 +41,24 @@ fluid.defaults("sjrk.server.couchConfig.example", {
     },
     dbViews: {
         "docIdsWithTitles": {
-            "map": "sjrk.server.couchConfig.example.docIdsWithTitlesMapFunction"
+            "map": "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
         },
         "tagCount": {
-            "map": "sjrk.server.couchConfig.example.tagCountMapFunction",
-            "reduce": "sjrk.server.couchConfig.example.tagCountReduceFunction"
+            "map": "fluid.couchConfig.example.tagCountMapFunction",
+            "reduce": "fluid.couchConfig.example.tagCountReduceFunction"
         }
     },
     dbValidate: {
-        validateFunction: "sjrk.server.couchConfig.example.validateFunction"
+        validateFunction: "fluid.couchConfig.example.validateFunction"
     }
 });
 
-sjrk.server.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
+fluid.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
     emit(doc._id, doc.title);
 };
 
 // http://localhost:5984/test/_design/views/_view/tagCount?group=true
-sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
+fluid.couchConfig.example.tagCountMapFunction = function (doc) {
     if (doc.tags.length > 0) {
         for (var idx in doc.tags) {
             emit(doc.tags[idx], 1);
@@ -68,15 +67,16 @@ sjrk.server.couchConfig.example.tagCountMapFunction = function (doc) {
 };
 
 // eslint-disable-next-line no-unused-vars
-sjrk.server.couchConfig.example.tagCountReduceFunction = function (keys, values, rerereduce) {
+fluid.couchConfig.example.tagCountReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 
 // eslint-disable-next-line no-unused-vars
-sjrk.server.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
+fluid.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
+
     if (!newDoc.type) {
         throw ({forbidden: "doc.type is required"});
     }
 };
 
-sjrk.server.couchConfig.example();
+fluid.couchConfig.example();
