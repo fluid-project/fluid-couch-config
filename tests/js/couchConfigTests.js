@@ -7,7 +7,9 @@ You may obtain a copy of the ECL 2.0 License and BSD License at
 https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENSE.txt
 */
 
-/* global fluid */
+/* global fluid, emit, sum  */
+/*eslint no-unused-vars: ["error", { "vars": "local", "argsIgnorePattern": "rereduce|doc|newDoc|oldDoc|userCtx|secObj" }]*/
+
 
 "use strict";
 
@@ -154,7 +156,7 @@ sjrk.server.couchConfigTester.testMapFunction = function (doc) {
 };
 
 // A basic reduce function that sums the values
-sjrk.server.couchConfigTester.testReduceFunction = function (keys, values, rerereduce) {
+sjrk.server.couchConfigTester.testReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 

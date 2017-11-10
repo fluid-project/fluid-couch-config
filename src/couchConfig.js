@@ -115,7 +115,7 @@ sjrk.server.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
 };
 
 sjrk.server.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
-    that.processedDocuments = that.processedDocuments +1;
+    that.processedDocuments = that.processedDocuments + 1;
 
     // Document processing complete
     if (that.processedDocuments === that.totalDocuments) {
