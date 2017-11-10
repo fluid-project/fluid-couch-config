@@ -113,7 +113,7 @@ fluid.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
 };
 
 fluid.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
-    that.processedDocuments = that.processedDocuments +1;
+    that.processedDocuments = that.processedDocuments + 1;
 
     // Document processing complete
     if (that.processedDocuments === that.totalDocuments) {

@@ -7,7 +7,7 @@ You may obtain a copy of the ECL 2.0 License and BSD License at
 https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENSE.txt
 */
 
-/* global fluid */
+/* global emit, sum  */
 
 "use strict";
 
@@ -138,6 +138,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
 });
 
 // A basic validation that checks the document to make sure its 'type' is 'test'
+// eslint-disable-next-line no-unused-vars
 fluid.tests.couchConfig.testValidateFunction = function (newDoc, oldDoc, userCtx) {
     if (!newDoc.type || newDoc.type !== "test") {
         throw ({forbidden: "It's not a test document"});
@@ -152,6 +153,7 @@ fluid.tests.couchConfig.testMapFunction = function (doc) {
 };
 
 // A basic reduce function that sums the values
+// eslint-disable-next-line no-unused-vars
 fluid.tests.couchConfig.testReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
