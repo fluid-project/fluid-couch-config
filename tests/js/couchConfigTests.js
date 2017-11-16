@@ -22,8 +22,6 @@ var jqUnit = require("node-jqunit");
 
 require("../../src/couchConfig");
 
-"use strict";
-
 fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
     gradeNames: ["fluid.couchConfig.db", "fluid.couchConfig.documents", "fluid.couchConfig.designDocument"],
     dbConfig: {
