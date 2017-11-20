@@ -16,40 +16,44 @@ var fluid = require("infusion");
 require("../../src/couchConfig");
 
 fluid.defaults("fluid.couchConfig.example", {
-    gradeNames: ["fluid.couchConfig.auto"],
-    dbConfig: {
-        dbName: "test",
-        designDocName: "views"
+    gradeNames: ["fluid.couchConfig.pipeline"],
+    couchOptions: {
+        dbName: "test-fluid-couch-config-db"
+    },
+    listeners: {
+        onCreate: "{that}.configureCouch",
+        onSuccess: "console.log(SUCCESS)",
+        onError: "console.log({arguments}.0)"
     },
     dbDocuments: {
-        "test1": {
-            "title": "Hello, World!",
-            "tags": ["hello", "world", "test"],
-            "type": "post"
+        test1: {
+            title: "Hello, World!",
+            tags: ["hello", "world", "test"],
+            type: "post"
         },
-        "test2": {
-            "title": "Goodbye, World!",
-            "tags": ["goodbye", "world", "test"],
-            "type": "post"
+        test2: {
+            title: "Goodbye, World!",
+            tags: ["goodbye", "world", "test"],
+            type: "post"
         },
         // This document will fail to be updated/inserted due to the
         // validation function
-        "test3": {
-            "title": "I don't have a 'type' field. I'm going to fail validation.",
-            "tags": ["invalid", "test"]
+        test3: {
+            title: "I don't have a 'type' field. I'm going to fail validation.",
+            tags: ["invalid", "test"]
         }
     },
-    dbViews: {
-        "docIdsWithTitles": {
-            "map": "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
-        },
-        "tagCount": {
-            "map": "fluid.couchConfig.example.tagCountMapFunction",
-            "reduce": "fluid.couchConfig.example.tagCountReduceFunction"
+    dbDesignDocuments: {
+        views: {
+            docIdsWithTitles: {
+                map: "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
+            },
+            tagCount: {
+                map: "fluid.couchConfig.example.tagCountMapFunction",
+                reduce: "fluid.couchConfig.example.tagCountReduceFunction"
+            },
+            validate_doc_update: "fluid.couchConfig.example.validateFunction"
         }
-    },
-    dbValidate: {
-        validateFunction: "fluid.couchConfig.example.validateFunction"
     }
 });
 

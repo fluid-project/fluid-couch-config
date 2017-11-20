@@ -96,7 +96,7 @@ fluid.defaults("fluid.couchConfig.createDbIfNotExist", {
     invokers: {
         doAction: {
             funcName: "fluid.couchConfig.createDbIfNotExist.doAction",
-            args: [{}, "{couchConfig}.options.couchOptions"]
+            args: [{}, "{couchConfig}.options"]
         }
     }
 });
@@ -152,27 +152,31 @@ fluid.defaults("fluid.couchConfig.updateDesignDocument", {
     invokers: {
         doAction: {
             funcName: "fluid.couchConfig.updateDesignDocument.doAction",
-            args: [{}, "{couchConfig}.options.couchOptions"]
+            args: [{}, "{couchConfig}.options"]
         }
     }
 });
 
-fluid.couchConfig.designDocument.renderFunctionString = function (func) {
-    // Direct function references
-    if (typeof func === "function") {
-        return func.toString();
-    }
-    // Resolve funcNames using fluid.getGlobalValue
-    if (typeof func === "string") {
-        var namedFunc = fluid.getGlobalValue(func);
-        return namedFunc.toString();
+fluid.couchConfig.updateDesignDocument.renderFunctionString = function (func) {
+    if (func) {
+        // Direct function references
+        if (typeof func === "function") {
+            return func.toString();
+        }
+        // Resolve funcNames using fluid.getGlobalValue
+        if (typeof func === "string") {
+            var namedFunc = fluid.getGlobalValue(func);
+            return namedFunc.toString();
+        }
+    } else {
+        return func;
     }
 };
 
-fluid.couchConfig.designDocument.renderViewFunctions = function (viewsCollection) {
+fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (viewsCollection) {
     var transformedViews = fluid.transform(viewsCollection, function (desiredView, viewKey) {
         // The special-case validate_doc_update function
-        if (viewKey === "validate_doc_update") {
+        if (viewKey && viewKey === "validate_doc_update") {
             return fluid.couchConfig.designDocument.renderFunctionString(desiredView);
         } else {
             return fluid.transform(desiredView, function (viewFunc, funcKey) {
@@ -286,7 +290,7 @@ fluid.defaults("fluid.couchConfig.updateDocuments", {
     invokers: {
         doAction: {
             funcName: "fluid.couchConfig.updateDocuments.doAction",
-            args: [{}, "{couchConfig}.options.couchOptions"]
+            args: [{}, "{couchConfig}.options"]
         }
     }
 });
