@@ -188,7 +188,27 @@ fluid.couchConfig.designDocument.renderViewFunctions = function (viewsCollection
     return transformedViews;
 };
 
-fluid.couchConfig.updateSingleDocument = function (targetDb, doc, id) {
+fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
+    var togo = fluid.promise();
+
+    targetDb.insert(doc, id, function (err, body) {
+        if (!err) {
+            fluid.log("Document " + id + " inserted successfully");
+            togo.resolve();
+        } else {
+            fluid.log("Error in inserting document " + id);
+            togo.reject({
+                isError: true,
+                message: err + " " + body,
+                statusCode: err.statusCode
+            });
+        }
+    });
+
+    return togo;
+};
+
+fluid.couchConfig.action.updateSingleDocument = function (targetDb, doc, id) {
     var togo = fluid.promise();
 
     targetDb.get(id, function (err, body) {
@@ -198,53 +218,29 @@ fluid.couchConfig.updateSingleDocument = function (targetDb, doc, id) {
             var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
 
             if (isEqual(doc, existingDocValues)) {
-                fluid.log("Document unchanged from existing in CouchDB, not updating");
+                fluid.log("Document " + id + " unchanged from existing in CouchDB, not updating");
                 togo.resolve();
             } else {
+                fluid.log("Document " + id + " has been changed, attempting to update");
                 doc._rev = body._rev; // Including the _rev indicates an update
-                targetDb.insert(doc, id, function (err, body) {
-                    fluid.log("Document has been changed, attempting to update");
-                    if (!err) {
-                        fluid.log("Document updated successfully");
-                        togo.resolve();
-                    } else {
-                        fluid.log("Error in updating document");
-                        togo.reject({
-                            isError: true,
-                            message: err + " " + body,
-                            statusCode: err.statusCode
-                        });
-                    }
-                });
+                return fluid.couchConfig.action.writeToDb(targetDb, doc, id);
             }
-        // Design document does not exist
         } else {
-            fluid.log("Document not found, creating");
-            targetDb.insert(doc, id, function (err, body) {
-                if (!err) {
-                    fluid.log("Document created successfully");
-                    togo.resolve();
-                } else {
-                    fluid.log("Error in creating document");
-                    togo.reject({
-                        isError: true,
-                        message: err + " " + body,
-                        statusCode: err.statusCode
-                    });
-                }
-            });
+            fluid.log("Document " + id + " not found, creating");
+            return fluid.couchConfig.action.writeToDb(targetDb, doc, id);
         }
     });
+
+    return togo;
 };
 
-fluid.couchConfig.updateDesignDocument.doAction = function (payload, options) {
+fluid.couchConfig.action.updateDocuments = function (payload, options, docs, docOperation, idOperation) {
     var togo = fluid.promise();
-    var designDocuments = options.couchOptions.dbDesignDocuments;
     var dbName = options.couchOptions.dbName;
     var couchUrl = options.couchOptions.couchUrl;
 
-    if (isEqual(designDocuments, {})) {
-        fluid.log("No design document elements");
+    if (isEqual(docs, {})) {
+        fluid.log("No documents to update");
         togo.resolve(payload);
         return togo;
     }
@@ -253,17 +249,16 @@ fluid.couchConfig.updateDesignDocument.doAction = function (payload, options) {
     var targetDb = nano.use(dbName);
 
     var promises = [];
-    fluid.each(designDocuments, function (doc, id) {
-        var designDocId = "_design/" + id;
+    fluid.each(docs, function (doc, id) {
+        // TODO: think of a cleaner way to do this
+        doc = docOperation(doc) || doc;
+        id = idOperation(id) || id;
 
         fluid.log(
-            fluid.stringTemplate("Updating design document at %couchUrl/%dbName/%id with defined views",
-            {couchUrl: couchUrl, dbName: dbName, id: designDocId}));
+            fluid.stringTemplate("Updating document at %couchUrl/%dbName/%id with defined views",
+            {couchUrl: couchUrl, dbName: dbName, id: id}));
 
-        // TODO: add error handling for doc input
-        doc = fluid.couchConfig.designDocument.renderViewFunctions(doc);
-
-        promises.push(fluid.couchConfig.updateDocuments.updateSingleDesignDocument(targetDb, doc, id));
+        promises.push(fluid.couchConfig.action.updateSingleDocument(targetDb, doc, id));
     });
 
     fluid.promise.sequence(promises).then(function () {
@@ -273,6 +268,17 @@ fluid.couchConfig.updateDesignDocument.doAction = function (payload, options) {
     });
 
     return togo;
+};
+
+fluid.couchConfig.updateDesignDocument.doAction = function (payload, options) {
+    var designDocuments = options.couchOptions.dbDesignDocuments;
+
+    return fluid.couchConfig.action.updateDocuments(payload, options, designDocuments, function (doc) {
+        // TODO: add error handling for doc input
+        return fluid.couchConfig.designDocument.renderViewFunctions(doc);
+    }, function (id) {
+        return "_design/" + id;
+    });
 };
 
 fluid.defaults("fluid.couchConfig.updateDocuments", {
@@ -285,94 +291,9 @@ fluid.defaults("fluid.couchConfig.updateDocuments", {
     }
 });
 
-fluid.couchConfig.updateDocuments.updateSingleDocument = function (targetDb, doc, id) {
-    var togo = fluid.promise();
-
-    targetDb.get(id, function (err, body) {
-        if (!err) {
-            fluid.log("Document " + id + " found");
-
-            var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
-            var docValuesEqual = isEqual(doc, existingDocValues);
-            if (docValuesEqual) {
-                fluid.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
-                togo.resolve();
-            } else {
-                doc._rev = body._rev; // Including the _rev indicates an update
-                targetDb.insert(doc, id, function (err, body) {
-                    if (!err) {
-                        fluid.log("Update of document " + id + " inserted");
-                        togo.resolve();
-                    } else {
-                        fluid.log("Update of document " + id + " could not be inserted");
-                        togo.reject({
-                            isError: true,
-                            message: err + " " + body,
-                            statusCode: err.statusCode
-                        });
-                    }
-                });
-            }
-        } else {
-            fluid.log("Document " + id + " not found, creating");
-            targetDb.insert(doc, id, function (err, body) {
-                if (!err) {
-                    fluid.log("Document " + id + " inserted");
-                    togo.resolve();
-                } else {
-                    fluid.log("Document " + id + " could not be inserted");
-                    togo.reject({
-                        isError: true,
-                        message: err + " " + body,
-                        statusCode: err.statusCode
-                    });
-                }
-            });
-        }
-    });
-
-    return togo;
-};
-
 fluid.couchConfig.updateDocuments.doAction = function (payload, options) {
-    var togo = fluid.promise();
     var documents = options.couchOptions.dbDocuments;
-    var dbName = options.couchOptions.dbName;
-    var couchUrl = options.couchOptions.couchUrl;
-
-    if (isEqual(documents, {})) {
-        fluid.log("No documents to update");
-        togo.resolve(payload);
-        return togo;
-    }
-
-    var nano = require("nano")(couchUrl);
-    var targetDb = nano.use(dbName);
-
-    fluid.log("Updating documents at for DB " + dbName + " in Couch instance at " + couchUrl);
-
-    var promises = [];
-    fluid.each(documents, function (doc, id) {
-        // togo = togo.then(function () {
-        //     fluid.couchConfig.updateDocuments.updateSingleDocument(targetDb, doc, id, payload);
-        // }, function (isError, message, statusCode) {
-        //     togo.reject({
-        //         isError: isError,
-        //         message: message,
-        //         statusCode: statusCode
-        //     });
-        // });
-
-        promises.push(fluid.couchConfig.updateDocuments.updateSingleDocument(targetDb, doc, id));
-    });
-
-    fluid.promise.sequence(promises).then(function () {
-        togo.resolve(payload);
-    }, function (err) {
-        togo.reject(err);
-    });
-
-    return togo;
+    return fluid.couchConfig.action.updateDocuments(payload, options, documents);
 };
 
 fluid.defaults("fluid.couchConfig.pipeline", {
@@ -413,102 +334,3 @@ fluid.defaults("fluid.couchConfig.pipeline", {
         }
     }
 });
-
-// // Generates a base design document
-// fluid.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
-//     return {
-//         _id: "_design/" + designDocName,
-//         views: {},
-//         language: "javascript"
-//     };
-// };
-//
-// fluid.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
-//
-//     var designDocObj = {};
-//
-//     var generatedViews = fluid.couchConfig.designDocument.generateViews(viewsObj);
-//
-//     if (!isEqual(generatedViews, {})) {
-//         designDocObj.views = generatedViews;
-//     }
-//
-//     if (validateFunction) {
-//         // Direct function references
-//         if (typeof validateFunction === "function") {
-//             designDocObj.validate_doc_update = validateFunction.toString();
-//         }
-//         // Resolve funcNames using fluid.getGlobalValue
-//         if (typeof validateFunction === "string") {
-//             var namedFunc = fluid.getGlobalValue(validateFunction);
-//             designDocObj.validate_doc_update = namedFunc.toString();
-//         }
-//     }
-//
-//     if (isEqual(designDocObj, {})) {
-//         console.log("No design document elements");
-//         return;
-//     }
-//
-//     console.log(fluid.stringTemplate("Updating design document at %couchURL/%dbName/_design/%designDocName with defined views", {couchURL: couchURL, dbName: dbName, designDocName: designDocName}));
-//
-//     var designDoc;
-//
-//     var nano = require("nano")(couchURL);
-//
-//     var targetDB = nano.use(dbName);
-//
-//     var designDocId = "_design/" + designDocName;
-//
-//     targetDB.get(designDocId, function (err, body) {
-//         // Design document exists
-//         if (!err) {
-//             console.log("Existing design document found");
-//
-//             designDoc = body;
-//             var originaldesignDoc = fluid.copy(designDoc);
-//
-//             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
-//                 designDoc[designDocItemKey] = designDocItem;
-//             });
-//
-//             var designDocChanged = !isEqual(originaldesignDoc, designDoc);
-//
-//             if (designDocChanged) {
-//                 targetDB.insert(designDoc, designDocId, function (err, body) {
-//                     console.log("Design doc has been changed, attempting to update");
-//                     if (!err) {
-//                         console.log("Design doc updated successfully");
-//                         console.log(body);
-//                         completionEvent.fire();
-//                     } else {
-//                         console.log("Error in updating design doc");
-//                         console.log(err, body);
-//                     }
-//                 });
-//             } else {
-//                 console.log("Design document unchanged from existing in CouchDB, not updating");
-//                 completionEvent.fire();
-//             }
-//         // Design document does not exist
-//         } else {
-//             console.log("Design document not found, creating");
-//             designDoc = fluid.couchConfig.designDocument.getBaseDesignDocument(designDocName);
-//
-//             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
-//                 designDoc[designDocItemKey] = designDocItem;
-//             });
-//
-//             targetDB.insert(designDoc, designDocId, function (err, body) {
-//                 if (!err) {
-//                     console.log("Design doc created successfully");
-//                     console.log(body);
-//                     completionEvent.fire();
-//                 } else {
-//                     console.log(err, body);
-//                     console.log("Error in creating design document");
-//                 }
-//             });
-//         }
-//     });
-// };
