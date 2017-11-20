@@ -11,347 +11,504 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 
 var fluid = require("infusion");
 var isEqual = require("underscore").isEqual;
-var size = require("underscore").size;
+//var size = require("underscore").size;
 
-fluid.defaults("fluid.couchConfig.base", {
-    gradeNames: ["fluid.component"],
-    dbConfig: {
-        couchURL: "http://localhost:5984"
+fluid.defaults("fluid.couchConfig", {
+    gradeNames: "fluid.component",
+    couchOptions: {
+        couchUrl: "http://localhost:5984",
+        dbName: null, // To be provided
+        dbDocuments: {
+            // An object whose keys are the IDs of documents to
+            // be created in the database, and the values are the documents
+            // themselves.
+        },
+        dbDesignDocuments: {
+            // An object whose keys are the names of design documents to be
+            // created in the database. Each design document can have a
+            // collection of zero or more views, where the keys are the names
+            // of each view. Each view would in turn have the keys "map" and
+            // "reduce", which are function references or function names for
+            // functions accessible by couchConfig. These functions, internally,
+            // can only refer to other functions known to CouchDB.
+            // http://guide.couchdb.org/editions/1/en/views.html
+            // TODO: verify that this last claim is accurate
+
+            // Additionally, "reduce" may specify by name one of the three
+            // built-in reduce functions: "_sum", "_count", or "_stats"
+            // https://wiki.apache.org/couchdb/Built-In_Reduce_Functions
+
+            // Each design document may also have up to one validate_doc_update
+            // function, and must conform to this specification:
+            // http://guide.couchdb.org/editions/1/en/validation.html
+
+            // for example:
+            // designDocumentName: {
+            //     someViewFunction: {
+            //         map: "reference.to.a.function",
+            //         reduce: "reference.to.another.function"
+            //     },
+            //     anotherViewFunction: {
+            //         map: "reference.to.yet.another.function",
+            //         reduce: "reference.to.still.another.function"
+            //     },
+            //     validate_doc_update: "a.validation.function"
+            // }
+        }
+    },
+    invokers: {
+        configureCouch: {
+            funcName: "fluid.couchConfig.configureCouch",
+            args: [
+                "{that}.options.couchOptions",
+                "{that}.events.onConfiguring",
+                "{that}.events.onSuccess",
+                "{that}.events.onError"
+            ]
+        }
+    },
+    events: {
+        onConfiguring: null, // Actions listen to this event
+        onSuccess: null, // Fired upon successful configuration
+        onError: null // Fired if a configuration action signals rejection
     }
 });
 
-fluid.defaults("fluid.couchConfig.db", {
-    gradeNames: ["fluid.couchConfig.base"],
-    dbConfig: {
-        // dbName: "targetDB",
-    },
-    events: {
-        // Fired after the component confirms the target DB exists;
-        // necessary for sequencing document-related updates
-        onDBExists: null
-    },
+fluid.couchConfig.configureCouch = function (couchOptions, onConfiguringEvent, onSuccessEvent, onErrorEvent) {
+    fluid.promise.fireTransformEvent(onConfiguringEvent, {}, {
+        couchOptions : couchOptions
+    }).then(function (value) {
+        onSuccessEvent.fire(value);
+    }, function (err) {
+        onErrorEvent.fire(err);
+    });
+};
+
+fluid.defaults("fluid.couchConfig.action", {
+    gradeNames: "fluid.component",
     invokers: {
-        ensureDBExists: {
-            funcName: "fluid.couchConfig.db.ensureDBExists",
-            args: ["{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDBExists"]
+        doAction: "fluid.notImplemented" // To be provided
+    }
+});
+
+fluid.defaults("fluid.couchConfig.createDbIfNotExist", {
+    gradeNames: "fluid.couchConfig.action",
+    invokers: {
+        doAction: {
+            funcName: "fluid.couchConfig.createDbIfNotExist.doAction",
+            args: [{}, "{couchConfig}.options.couchOptions"]
         }
     }
 });
 
-fluid.couchConfig.db.ensureDBExists = function (couchURL, dbName, completionEvent) {
-    console.log("Making sure DB " + dbName + " exists in Couch instance at " + couchURL);
-    var nano = require("nano")(couchURL);
+fluid.couchConfig.createDbIfNotExist.doAction = function (payload, options) {
+    var togo = fluid.promise();
+
+    var dbName = options.couchOptions.dbName;
+    var couchUrl = options.couchOptions.couchUrl;
+
+    fluid.log("Making sure DB " + dbName + " exists in Couch instance at " + couchUrl);
+    var nano = require("nano")(couchUrl);
+
     nano.db.get(dbName, function (err, body) {
         if (!err) {
-            console.log("DB " + dbName + " exists");
-            completionEvent.fire();
+            fluid.log("DB " + dbName + " exists");
+            togo.resolve(payload);
         } else {
             if (err.statusCode === 404) {
-                console.log("DB does not exist, trying to create");
+                fluid.log("DB does not exist, trying to create");
                 nano.db.create(dbName, function (err, body) {
                     if (!err) {
-                        console.log("DB " + dbName + " created");
-                        completionEvent.fire();
+                        fluid.log("DB " + dbName + " created");
+                        togo.resolve(payload);
                     } else {
-                        console.log("DB " + dbName + " could not be created");
-                        console.log(err, body);
+                        fluid.log("DB " + dbName + " could not be created");
+                        //fluid.log(err, body);
+                        togo.reject({
+                            isError: true,
+                            message: err + " " + body,
+                            statusCode: 404
+                        });
                     }
                 });
             } else {
-                console.log("Could not get information about DB " + dbName);
-                console.log(err, body);
+                fluid.log("Could not get information about DB " + dbName);
+                //fluid.log(err, body);
+                togo.reject({
+                    isError: true,
+                    message: err + " " + body,
+                    statusCode: err.statusCode
+                });
             }
 
         }
     });
+
+    return togo;
 };
 
-fluid.defaults("fluid.couchConfig.documents", {
-    dbConfig: {
-        // dbName: "targetDB",
-    },
-    gradeNames: ["fluid.couchConfig.base"],
-    // Ensure one or more documents exist; key will be used as the document _id
-    dbDocuments: {
-        // "test1": {
-        //     "message": "Hello, World!",
-        //     "tags": ["Hello", "World", "test"]
-        // }
-    },
-    members: {
-        totalDocuments: {
-            expander: {
-                func: "fluid.couchConfig.documents.getTotalDocuments",
-                args: "{that}.options.dbDocuments"
-            }
-        },
-        processedDocuments: 0
-    },
-    events: {
-        // Fired after the documents are updated
-        // necessary for making sure documents aren't pushed before a
-        // validation function is in place
-        onDocsUpdated: null,
-        onDocumentProcessed: null
-    },
-    listeners: {
-        onDocumentProcessed: {
-            func: "fluid.couchConfig.documents.handleOnDocumentProcessed",
-            args: ["{that}", "{that}.events.onDocsUpdated"]
-        }
-    },
+fluid.defaults("fluid.couchConfig.updateDesignDocument", {
+    gradeNames: "fluid.couchConfig.action",
     invokers: {
-        updateDocuments: {
-            funcName: "fluid.couchConfig.documents.updateDocuments",
-            args: ["{that}.options.dbDocuments", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.events.onDocumentProcessed"]
+        doAction: {
+            funcName: "fluid.couchConfig.updateDesignDocument.doAction",
+            args: [{}, "{couchConfig}.options.couchOptions"]
         }
     }
 });
 
-fluid.couchConfig.documents.getTotalDocuments = function (dbDocuments) {
-    return size(dbDocuments);
-};
-
-fluid.couchConfig.documents.handleOnDocumentProcessed = function (that, completionEvent) {
-    that.processedDocuments = that.processedDocuments + 1;
-
-    // Document processing complete
-    if (that.processedDocuments === that.totalDocuments) {
-        that.processedDocuments = 0;
-        completionEvent.fire();
+fluid.couchConfig.designDocument.renderFunctionString = function (func) {
+    // Direct function references
+    if (typeof func === "function") {
+        return func.toString();
+    }
+    // Resolve funcNames using fluid.getGlobalValue
+    if (typeof func === "string") {
+        var namedFunc = fluid.getGlobalValue(func);
+        return namedFunc.toString();
     }
 };
 
-fluid.couchConfig.documents.updateDocuments = function (documents, couchURL, dbName, completionEvent) {
-    if (isEqual(documents, {})) {
-        console.log("No documents to update");
-        return;
-    }
-
-    console.log("Updating documents at for DB " + dbName + " in Couch instance at " + couchURL);
-
-    var nano = require("nano")(couchURL);
-    nano.use(dbName);
-
-    var targetDB = nano.use(dbName);
-
-    fluid.each(documents, function (doc, id) {
-
-        targetDB.get(id, function (err, body) {
-            if (!err) {
-                console.log("Document " + id + " found");
-
-                var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
-                var docValuesEqual = isEqual(doc, existingDocValues);
-                if (docValuesEqual) {
-                    console.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
-                    completionEvent.fire();
-                    return;
+fluid.couchConfig.designDocument.renderViewFunctions = function (viewsCollection) {
+    var transformedViews = fluid.transform(viewsCollection, function (desiredView, viewKey) {
+        // The special-case validate_doc_update function
+        if (viewKey === "validate_doc_update") {
+            return fluid.couchConfig.designDocument.renderFunctionString(desiredView);
+        } else {
+            return fluid.transform(desiredView, function (viewFunc, funcKey) {
+                // The internal CouchDB reduce functions
+                if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
+                    return viewFunc;
                 }
 
-                doc._rev = body._rev;
-                targetDB.insert(doc, id, function (err, body) {
-                    if (!err) {
-                        console.log("Update of document " + id + " inserted");
-                        console.log(body);
-                        completionEvent.fire();
-                    }
-                    if (err) {
-                        console.log("Update of document " + id + " could not be inserted");
-                        console.log(err, body);
-                        completionEvent.fire();
-                    }
-                });
-            }
-            if (err) {
-                console.log("Document " + id + " not found, creating");
-                targetDB.insert(doc, id, function (err, body) {
-                    if (!err) {
-                        console.log("Document " + id + " inserted");
-                        console.log(body);
-                        completionEvent.fire();
-                    }
-                    if (err) {
-                        console.log("Document " + id + " could not be inserted");
-                        console.log(err, body);
-                        completionEvent.fire();
-                    }
-                });
-            }
-        });
-    });
-};
-
-fluid.defaults("fluid.couchConfig.designDocument", {
-    gradeNames: ["fluid.couchConfig.base"],
-    events: {
-        // Fired after the design document is updated
-        // necessary for making sure documents aren't pushed before a
-        // validation function is in place
-        onDesignDocUpdated: null
-    },
-    invokers: {
-        updateDesignDoc: {
-            funcName: "fluid.couchConfig.designDocument.updateDesignDoc",
-            args: ["{that}.options.dbViews", "{that}.options.dbValidate.validateFunction", "{that}.options.dbConfig.couchURL", "{that}.options.dbConfig.dbName", "{that}.options.dbConfig.designDocName", "{that}.events.onDesignDocUpdated"]
-        }
-    },
-    dbConfig: {
-        // dbName: "targetDB",
-        // designDocName: "views"
-    },
-    // map / reduce can be a function reference or a
-    // function name as string. CouchDB's internal
-    // reduce functions (_sum, _count, and _stats) can also
-    // be used by name as strings in the reduce key
-    dbViews: {
-        // count: {
-        //     map: "fluid.couchConfig.countMapFunction",
-        //     reduce: "_count"
-        // }
-    },
-    // Supply a validation function to be mapped to validate_doc_update in the
-    // design document
-    dbValidate: {
-        // validateFunction: "fluid.couchConfig.validateFunction"
-    }
-});
-
-fluid.couchConfig.designDocument.generateViews = function (viewsObj) {
-    var transformedView = fluid.transform(viewsObj, function (desiredView) {
-        var transformedFunction = fluid.transform(desiredView, function (viewFunc, funcKey) {
-            // The internal CouchDB reduce functions
-            if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
-                return viewFunc;
-            }
-            // Direct function references
-            if (typeof viewFunc === "function") {
-                return viewFunc.toString();
-            }
-            // Resolve funcNames using fluid.getGlobalValue
-            if (typeof viewFunc === "string") {
-                var namedFunc = fluid.getGlobalValue(viewFunc);
-                return namedFunc.toString();
-            }
-        });
-        return transformedFunction;
-    });
-    return transformedView;
-};
-
-// Generates a base design document
-fluid.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
-    return {
-        _id: "_design/" + designDocName,
-        views: {},
-        language: "javascript"
-    };
-};
-
-fluid.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
-
-    var designDocObj = {};
-
-    var generatedViews = fluid.couchConfig.designDocument.generateViews(viewsObj);
-
-    if (!isEqual(generatedViews, {})) {
-        designDocObj.views = generatedViews;
-    }
-
-    if (validateFunction) {
-        // Direct function references
-        if (typeof validateFunction === "function") {
-            designDocObj.validate_doc_update = validateFunction.toString();
-        }
-        // Resolve funcNames using fluid.getGlobalValue
-        if (typeof validateFunction === "string") {
-            var namedFunc = fluid.getGlobalValue(validateFunction);
-            designDocObj.validate_doc_update = namedFunc.toString();
-        }
-    }
-
-    if (isEqual(designDocObj, {})) {
-        console.log("No design document elements");
-        return;
-    }
-
-    console.log(fluid.stringTemplate("Updating design document at %couchURL/%dbName/_design/%designDocName with defined views", {couchURL: couchURL, dbName: dbName, designDocName: designDocName}));
-
-    var designDoc;
-
-    var nano = require("nano")(couchURL);
-
-    var targetDB = nano.use(dbName);
-
-    var designDocId = "_design/" + designDocName;
-
-    targetDB.get(designDocId, function (err, body) {
-        // Design document exists
-        if (!err) {
-            console.log("Existing design document found");
-
-            designDoc = body;
-            var originaldesignDoc = fluid.copy(designDoc);
-
-            fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
-                designDoc[designDocItemKey] = designDocItem;
+                return fluid.couchConfig.designDocument.renderFunctionString(viewFunc);
             });
+        }
+    });
+    return transformedViews;
+};
 
-            var designDocChanged = !isEqual(originaldesignDoc, designDoc);
+fluid.couchConfig.updateSingleDocument = function (targetDb, doc, id) {
+    var togo = fluid.promise();
 
-            if (designDocChanged) {
-                targetDB.insert(designDoc, designDocId, function (err, body) {
-                    console.log("Design doc has been changed, attempting to update");
+    targetDb.get(id, function (err, body) {
+        if (!err) {
+            fluid.log("Existing document " + id + " found");
+
+            var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
+
+            if (isEqual(doc, existingDocValues)) {
+                fluid.log("Document unchanged from existing in CouchDB, not updating");
+                togo.resolve();
+            } else {
+                doc._rev = body._rev; // Including the _rev indicates an update
+                targetDb.insert(doc, id, function (err, body) {
+                    fluid.log("Document has been changed, attempting to update");
                     if (!err) {
-                        console.log("Design doc updated successfully");
-                        console.log(body);
-                        completionEvent.fire();
+                        fluid.log("Document updated successfully");
+                        togo.resolve();
                     } else {
-                        console.log("Error in updating design doc");
-                        console.log(err, body);
+                        fluid.log("Error in updating document");
+                        togo.reject({
+                            isError: true,
+                            message: err + " " + body,
+                            statusCode: err.statusCode
+                        });
                     }
                 });
-            } else {
-                console.log("Design document unchanged from existing in CouchDB, not updating");
-                completionEvent.fire();
             }
         // Design document does not exist
         } else {
-            console.log("Design document not found, creating");
-            designDoc = fluid.couchConfig.designDocument.getBaseDesignDocument(designDocName);
-
-            fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
-                designDoc[designDocItemKey] = designDocItem;
-            });
-
-            targetDB.insert(designDoc, designDocId, function (err, body) {
+            fluid.log("Document not found, creating");
+            targetDb.insert(doc, id, function (err, body) {
                 if (!err) {
-                    console.log("Design doc created successfully");
-                    console.log(body);
-                    completionEvent.fire();
+                    fluid.log("Document created successfully");
+                    togo.resolve();
                 } else {
-                    console.log(err, body);
-                    console.log("Error in creating design document");
+                    fluid.log("Error in creating document");
+                    togo.reject({
+                        isError: true,
+                        message: err + " " + body,
+                        statusCode: err.statusCode
+                    });
                 }
             });
         }
     });
 };
 
-// Convenience grade that calls all the configuration functions at instantiation,
-// in an appropriate order - intended to set up an application's initial
-// configuration in one go
-fluid.defaults("fluid.couchConfig.auto", {
-    gradeNames: ["fluid.couchConfig.db", "fluid.couchConfig.documents", "fluid.couchConfig.designDocument"],
-    listeners: {
-        "onCreate.ensureDBExists": {
-            func: "{that}.ensureDBExists"
-        },
-        "onDBExists.updateDesignDoc": {
-            func: "{that}.updateDesignDoc"
-        },
-        "onDesignDocUpdated.updateDocuments": {
-            func: "{that}.updateDocuments"
+fluid.couchConfig.updateDesignDocument.doAction = function (payload, options) {
+    var togo = fluid.promise();
+    var designDocuments = options.couchOptions.dbDesignDocuments;
+    var dbName = options.couchOptions.dbName;
+    var couchUrl = options.couchOptions.couchUrl;
+
+    if (isEqual(designDocuments, {})) {
+        fluid.log("No design document elements");
+        togo.resolve(payload);
+        return togo;
+    }
+
+    var nano = require("nano")(couchUrl);
+    var targetDb = nano.use(dbName);
+
+    var promises = [];
+    fluid.each(designDocuments, function (doc, id) {
+        var designDocId = "_design/" + id;
+
+        fluid.log(
+            fluid.stringTemplate("Updating design document at %couchUrl/%dbName/%id with defined views",
+            {couchUrl: couchUrl, dbName: dbName, id: designDocId}));
+
+        // TODO: add error handling for doc input
+        doc = fluid.couchConfig.designDocument.renderViewFunctions(doc);
+
+        promises.push(fluid.couchConfig.updateDocuments.updateSingleDesignDocument(targetDb, doc, id));
+    });
+
+    fluid.promise.sequence(promises).then(function () {
+        togo.resolve(payload);
+    }, function (err) {
+        togo.reject(err);
+    });
+
+    return togo;
+};
+
+fluid.defaults("fluid.couchConfig.updateDocuments", {
+    gradeNames: "fluid.couchConfig.action",
+    invokers: {
+        doAction: {
+            funcName: "fluid.couchConfig.updateDocuments.doAction",
+            args: [{}, "{couchConfig}.options.couchOptions"]
         }
     }
 });
+
+fluid.couchConfig.updateDocuments.updateSingleDocument = function (targetDb, doc, id) {
+    var togo = fluid.promise();
+
+    targetDb.get(id, function (err, body) {
+        if (!err) {
+            fluid.log("Document " + id + " found");
+
+            var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
+            var docValuesEqual = isEqual(doc, existingDocValues);
+            if (docValuesEqual) {
+                fluid.log("Document values of " + id + " are equivalent, not updating to avoid needless revisioning");
+                togo.resolve();
+            } else {
+                doc._rev = body._rev; // Including the _rev indicates an update
+                targetDb.insert(doc, id, function (err, body) {
+                    if (!err) {
+                        fluid.log("Update of document " + id + " inserted");
+                        togo.resolve();
+                    } else {
+                        fluid.log("Update of document " + id + " could not be inserted");
+                        togo.reject({
+                            isError: true,
+                            message: err + " " + body,
+                            statusCode: err.statusCode
+                        });
+                    }
+                });
+            }
+        } else {
+            fluid.log("Document " + id + " not found, creating");
+            targetDb.insert(doc, id, function (err, body) {
+                if (!err) {
+                    fluid.log("Document " + id + " inserted");
+                    togo.resolve();
+                } else {
+                    fluid.log("Document " + id + " could not be inserted");
+                    togo.reject({
+                        isError: true,
+                        message: err + " " + body,
+                        statusCode: err.statusCode
+                    });
+                }
+            });
+        }
+    });
+
+    return togo;
+};
+
+fluid.couchConfig.updateDocuments.doAction = function (payload, options) {
+    var togo = fluid.promise();
+    var documents = options.couchOptions.dbDocuments;
+    var dbName = options.couchOptions.dbName;
+    var couchUrl = options.couchOptions.couchUrl;
+
+    if (isEqual(documents, {})) {
+        fluid.log("No documents to update");
+        togo.resolve(payload);
+        return togo;
+    }
+
+    var nano = require("nano")(couchUrl);
+    var targetDb = nano.use(dbName);
+
+    fluid.log("Updating documents at for DB " + dbName + " in Couch instance at " + couchUrl);
+
+    var promises = [];
+    fluid.each(documents, function (doc, id) {
+        // togo = togo.then(function () {
+        //     fluid.couchConfig.updateDocuments.updateSingleDocument(targetDb, doc, id, payload);
+        // }, function (isError, message, statusCode) {
+        //     togo.reject({
+        //         isError: isError,
+        //         message: message,
+        //         statusCode: statusCode
+        //     });
+        // });
+
+        promises.push(fluid.couchConfig.updateDocuments.updateSingleDocument(targetDb, doc, id));
+    });
+
+    fluid.promise.sequence(promises).then(function () {
+        togo.resolve(payload);
+    }, function (err) {
+        togo.reject(err);
+    });
+
+    return togo;
+};
+
+fluid.defaults("fluid.couchConfig.pipeline", {
+    gradeNames: "fluid.couchConfig",
+    components: {
+        createDbIfNotExistAction: {
+            type: "fluid.couchConfig.createDbIfNotExist",
+            options: {
+                listeners: {
+                    "{fluid.couchConfig}.events.onConfiguring": {
+                        listener: "{that}.doAction",
+                        priority: 30
+                    }
+                }
+            }
+        },
+        updateDesignDocumentAction: {
+            type: "fluid.couchConfig.updateDesignDocument",
+            options: {
+                listeners: {
+                    "{fluid.couchConfig}.events.onConfiguring": {
+                        listener: "{that}.doAction",
+                        priority: 20
+                    }
+                }
+            }
+        },
+        updateDocumentsAction: {
+            type: "fluid.couchConfig.updateDocuments",
+            options: {
+                listeners: {
+                    "{fluid.couchConfig}.events.onConfiguring": {
+                        listener: "{that}.doAction",
+                        priority: 10
+                    }
+                }
+            }
+        }
+    }
+});
+
+// // Generates a base design document
+// fluid.couchConfig.designDocument.getBaseDesignDocument = function (designDocName) {
+//     return {
+//         _id: "_design/" + designDocName,
+//         views: {},
+//         language: "javascript"
+//     };
+// };
+//
+// fluid.couchConfig.designDocument.updateDesignDoc = function (viewsObj, validateFunction, couchURL, dbName, designDocName, completionEvent) {
+//
+//     var designDocObj = {};
+//
+//     var generatedViews = fluid.couchConfig.designDocument.generateViews(viewsObj);
+//
+//     if (!isEqual(generatedViews, {})) {
+//         designDocObj.views = generatedViews;
+//     }
+//
+//     if (validateFunction) {
+//         // Direct function references
+//         if (typeof validateFunction === "function") {
+//             designDocObj.validate_doc_update = validateFunction.toString();
+//         }
+//         // Resolve funcNames using fluid.getGlobalValue
+//         if (typeof validateFunction === "string") {
+//             var namedFunc = fluid.getGlobalValue(validateFunction);
+//             designDocObj.validate_doc_update = namedFunc.toString();
+//         }
+//     }
+//
+//     if (isEqual(designDocObj, {})) {
+//         console.log("No design document elements");
+//         return;
+//     }
+//
+//     console.log(fluid.stringTemplate("Updating design document at %couchURL/%dbName/_design/%designDocName with defined views", {couchURL: couchURL, dbName: dbName, designDocName: designDocName}));
+//
+//     var designDoc;
+//
+//     var nano = require("nano")(couchURL);
+//
+//     var targetDB = nano.use(dbName);
+//
+//     var designDocId = "_design/" + designDocName;
+//
+//     targetDB.get(designDocId, function (err, body) {
+//         // Design document exists
+//         if (!err) {
+//             console.log("Existing design document found");
+//
+//             designDoc = body;
+//             var originaldesignDoc = fluid.copy(designDoc);
+//
+//             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
+//                 designDoc[designDocItemKey] = designDocItem;
+//             });
+//
+//             var designDocChanged = !isEqual(originaldesignDoc, designDoc);
+//
+//             if (designDocChanged) {
+//                 targetDB.insert(designDoc, designDocId, function (err, body) {
+//                     console.log("Design doc has been changed, attempting to update");
+//                     if (!err) {
+//                         console.log("Design doc updated successfully");
+//                         console.log(body);
+//                         completionEvent.fire();
+//                     } else {
+//                         console.log("Error in updating design doc");
+//                         console.log(err, body);
+//                     }
+//                 });
+//             } else {
+//                 console.log("Design document unchanged from existing in CouchDB, not updating");
+//                 completionEvent.fire();
+//             }
+//         // Design document does not exist
+//         } else {
+//             console.log("Design document not found, creating");
+//             designDoc = fluid.couchConfig.designDocument.getBaseDesignDocument(designDocName);
+//
+//             fluid.each(designDocObj, function (designDocItem, designDocItemKey) {
+//                 designDoc[designDocItemKey] = designDocItem;
+//             });
+//
+//             targetDB.insert(designDoc, designDocId, function (err, body) {
+//                 if (!err) {
+//                     console.log("Design doc created successfully");
+//                     console.log(body);
+//                     completionEvent.fire();
+//                 } else {
+//                     console.log(err, body);
+//                     console.log("Error in creating design document");
+//                 }
+//             });
+//         }
+//     });
+// };
