@@ -246,17 +246,7 @@ fluid.couchConfig.action.updateDocuments = function (payload, options, docs) {
 
     var promises = [];
     fluid.each(docs, function (doc, id) {
-        console.log(
-            fluid.stringTemplate(
-                "Updating document at %couchUrl/%dbName/%id with defined views",
-                {
-                    couchUrl: options.couchOptions.couchUrl,
-                    dbName: options.couchOptions.dbName,
-                    id: id
-                }
-            )
-        );
-
+        console.log(fluid.stringTemplate("Updating document at %dbName/%id", { dbName: options.couchOptions.dbName, id: id }));
         promises.push(fluid.couchConfig.action.updateSingleDocument(targetDb, doc, id));
     });
 

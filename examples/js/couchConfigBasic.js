@@ -77,7 +77,6 @@ fluid.couchConfig.example.tagCountReduceFunction = function (keys, values, rered
 
 // eslint-disable-next-line no-unused-vars
 fluid.couchConfig.example.validateFunction = function (newDoc, oldDoc, userCtx, secObj) {
-
     if (!newDoc.type) {
         throw ({forbidden: "doc.type is required"});
     }

@@ -43,6 +43,11 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
             "type": "test",
             "key": "value2",
             "arrayKey": ["values", "in", "an", "array"]
+        },
+        testDoc3: {
+            //this won't fail, as PouchDB doesn't support validate_doc_update
+            "noType": "test",
+            "key": "value3"
         }
     },
     dbDesignDocuments: {
@@ -50,6 +55,12 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
             test: {
                 map: "fluid.tests.couchConfig.testMapFunction",
                 reduce: "fluid.tests.couchConfig.testReduceFunction"
+            },
+            // TODO: add verification for functions specified inline
+            test2: {
+                map: function (doc) {
+                    emit(doc, null);
+                }
             },
             validate_doc_update: "fluid.tests.couchConfig.testValidateFunction"
         }
@@ -61,6 +72,8 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     events: {
         nanoCallBackDone: null
     },
+    // TODO: ensure all tests are run on a fresh database with nothing in it
+    // TODO: check that CouchDB will have a new _rev for updating an identical document
     modules: [{
         name: "Test couch config.",
         tests: [{
@@ -70,32 +83,6 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
                 "resolveArgs": ["Database create/verify was completed successfully"]
-            }]
-        },
-        {
-            name: "Test CouchDB document loading",
-            expect: 5,
-            sequence: [{
-                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database create/verify was completed successfully"]
-            },
-            {
-                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database documents were created/updated successfully"]
-            },
-            {
-                "func": "fluid.tests.couchConfig.verifyDbDocument",
-                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
-                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
-                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
-                    "{that}.events.nanoCallBackDone"]
-            },
-            {
-                "event": "{that}.events.nanoCallBackDone",
-                "listener": "jqUnit.assert",
-                args: ["End of test sequence"]
             }]
         },
         {
@@ -116,6 +103,28 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["End of test sequence"]
+            }]
+        },
+        {
+            name: "Test CouchDB document loading",
+            expect: 4,
+            sequence: [{
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
                     "{that}.events.nanoCallBackDone"]
             },
             {
@@ -148,7 +157,7 @@ fluid.tests.couchConfig.testReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 
-fluid.tests.couchConfig.verifyDbDocument = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+fluid.tests.couchConfig.verifyDbDocumentEquals = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
@@ -156,6 +165,42 @@ fluid.tests.couchConfig.verifyDbDocument = function (dbName, couchUrl, expectedT
         if (!err) {
             jqUnit.assertEquals("The actual test document key is the same as expected", expectedTestDoc.key, actualTestDoc.key);
             jqUnit.assertDeepEq("The actual test document array is the same as expected", expectedTestDoc.arrayKey, actualTestDoc.arrayKey);
+        }
+
+        completionEvent.fire();
+    });
+};
+
+var preExistingTestDoc2 = {
+    "type": "test",
+    "key": "valueDifferent",
+    "arrayKey": ["different", "values", "in", "an", "array"]
+};
+
+fluid.tests.couchConfig.insertDocumentManually = function (dbName, couchUrl, completionEvent) {
+    var nano = require("nano")(couchUrl);
+    var db = nano.use(dbName);
+
+    // manually insert to the ID of a document that is already defined in the configuration
+    db.insert(preExistingTestDoc2, "testDoc2", function (err) {
+        if (!err) {
+            console.log("Document testDoc2 inserted successfully");
+        } else {
+            console.log("Error " + err.statusCode + " in inserting document testDoc2");
+        }
+
+        completionEvent.fire();
+    });
+};
+
+fluid.tests.couchConfig.verifyDbDocumentNotEquals = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+    var nano = require("nano")(couchUrl);
+    var db = nano.use(dbName);
+
+    db.get("testDoc", function (err, actualTestDoc) {
+        if (!err) {
+            jqUnit.assertNotEquals("The actual test document key is different from expected", expectedTestDoc.key, actualTestDoc.key);
+            jqUnit.assertDeepNeq("The actual test document array is different from expected", expectedTestDoc.arrayKey, actualTestDoc.arrayKey);
         }
 
         completionEvent.fire();
