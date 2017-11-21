@@ -86,7 +86,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "resolveArgs": ["Database documents were created/updated successfully"]
             },
             {
-                "func": "fluid.tests.couchConfig.testDbDocument",
+                "func": "fluid.tests.couchConfig.verifyDbDocument",
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
@@ -112,7 +112,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "resolveArgs": ["Database design document were created/updated successfully"]
             },
             {
-                "func": "fluid.tests.couchConfig.testDbView",
+                "func": "fluid.tests.couchConfig.verifyDbView",
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
@@ -148,7 +148,7 @@ fluid.tests.couchConfig.testReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 
-fluid.tests.couchConfig.testDbDocument = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+fluid.tests.couchConfig.verifyDbDocument = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
@@ -162,7 +162,7 @@ fluid.tests.couchConfig.testDbDocument = function (dbName, couchUrl, expectedTes
     });
 };
 
-fluid.tests.couchConfig.testDbView = function (dbName, couchUrl, expectedView, completionEvent) {
+fluid.tests.couchConfig.verifyDbView = function (dbName, couchUrl, expectedView, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
