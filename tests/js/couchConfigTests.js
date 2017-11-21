@@ -23,13 +23,17 @@ var jqUnit = require("node-jqunit");
 require("../../src/couchConfig");
 
 fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
-    gradeNames: ["fluid.couchConfig.db", "fluid.couchConfig.documents", "fluid.couchConfig.designDocument"],
-    dbConfig: {
-        couchURL: "http://localhost:6789",
-        dbName: "testDbForTests",
-        designDocName: "testViews"
+    gradeNames: ["fluid.couchConfig.pipeline"],
+    couchOptions: {
+        couchUrl: "http://localhost:6789",
+        dbName: "test-fluid-couch-config-db"
     },
-    dbDocuments : {
+    listeners: {
+        onCreate: "fluid.identity",
+        onSuccess: "console.log(SUCCESS)",
+        onError: "console.log({arguments}.0)"
+    },
+    dbDocuments: {
         testDoc: {
             "type": "test",
             "key": "value",
@@ -41,14 +45,14 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
             "arrayKey": ["values", "in", "an", "array"]
         }
     },
-    dbViews: {
-        test: {
-            map: "fluid.tests.couchConfig.testMapFunction",
-            reduce: "fluid.tests.couchConfig.testReduceFunction"
+    dbDesignDocuments: {
+        testViews: {
+            test: {
+                map: "fluid.tests.couchConfig.testMapFunction",
+                reduce: "fluid.tests.couchConfig.testReduceFunction"
+            },
+            validate_doc_update: "fluid.tests.couchConfig.testValidateFunction"
         }
-    },
-    dbValidate: {
-        validateFunction: "fluid.tests.couchConfig.testValidateFunction"
     }
 });
 
@@ -63,37 +67,28 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             name: "Test CouchDB intializing",
             expect: 1,
             sequence: [{
-                "func": "{couchConfigTest}.couchConfig.ensureDBExists"
-            },
-            {
-                "event": "{couchConfig}.events.onDBExists",
-                "listener": "jqUnit.assert",
-                args: ["Database create/verify was completed successfully"]
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
             }]
         },
         {
             name: "Test CouchDB document loading",
             expect: 5,
             sequence: [{
-                "func": "{couchConfigTest}.couchConfig.ensureDBExists"
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
             },
             {
-                "event": "{couchConfig}.events.onDBExists",
-                "listener": "{couchConfigTest}.couchConfig.updateDocuments"
-            },
-            {
-                "func": "jqUnit.assertEquals",
-                "args": ["Total documents count is expected number", 2, "{couchConfigTest}.couchConfig.totalDocuments"]
-            },
-            {
-                "event": "{couchConfig}.events.onDocsUpdated",
-                "listener": "jqUnit.assert",
-                args: ["Database documents were created/updated successfully"]
+                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database documents were created/updated successfully"]
             },
             {
                 "func": "fluid.tests.couchConfig.testDbDocument",
-                args: ["{couchConfigTest}.couchConfig.options.dbConfig.dbName",
-                    "{couchConfigTest}.couchConfig.options.dbConfig.couchURL",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
                     "{that}.events.nanoCallBackDone"]
             },
@@ -105,25 +100,22 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
         },
         {
             name: "Test CouchDB design document loading",
-            expect: 5,
+            expect: 6,
             sequence: [{
-                "func": "{couchConfigTest}.couchConfig.ensureDBExists"
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
             },
             {
-                "event": "{couchConfig}.events.onDBExists",
-                "listener": "{couchConfigTest}.couchConfig.updateDesignDoc"
-            },
-            {
-                "event": "{couchConfig}.events.onDesignDocUpdated",
-                "listener": "jqUnit.assert",
-                args: ["Database design document was created/updated successfully"]
+                "task": "{couchConfigTest}.couchConfig.updateDesignDocumentAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database design document were created/updated successfully"]
             },
             {
                 "func": "fluid.tests.couchConfig.testDbView",
-                args: ["{couchConfigTest}.couchConfig.options.dbConfig.dbName",
-                    "{couchConfigTest}.couchConfig.options.dbConfig.couchURL",
-                    "{couchConfigTest}.couchConfig.options.dbViews.test",
-                    "{couchConfigTest}.couchConfig.options.dbValidate.validateFunction",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
                     "{that}.events.nanoCallBackDone"]
             },
             {
@@ -170,17 +162,16 @@ fluid.tests.couchConfig.testDbDocument = function (dbName, couchUrl, expectedTes
     });
 };
 
-fluid.tests.couchConfig.testDbView = function (dbName, couchUrl, expectedView, expectedValidateFunction, completionEvent) {
+fluid.tests.couchConfig.testDbView = function (dbName, couchUrl, expectedView, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
     db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
-            var expectedMapFunction = expectedView.map;
-            var expectedReduceFunction = expectedView.reduce;
-            fluid.tests.couchConfig.compareFunctions("The actual view map function is the same as expected", expectedMapFunction, actualDesignDoc.views.test.map);
-            fluid.tests.couchConfig.compareFunctions("The actual view reduce function is the same as expected", expectedReduceFunction, actualDesignDoc.views.test.reduce);
-            fluid.tests.couchConfig.compareFunctions("The actual validate function is the same as expected", expectedValidateFunction, actualDesignDoc.validate_doc_update);
+            console.log(actualDesignDoc);
+            fluid.tests.couchConfig.compareFunctions("The actual view map function is the same as expected", expectedView.testViews.test.map, actualDesignDoc.test.map);
+            fluid.tests.couchConfig.compareFunctions("The actual view reduce function is the same as expected", expectedView.testViews.test.reduce, actualDesignDoc.test.reduce);
+            fluid.tests.couchConfig.compareFunctions("The actual validate function is the same as expected", expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update);
         }
 
         completionEvent.fire();
