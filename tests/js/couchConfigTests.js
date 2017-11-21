@@ -168,7 +168,6 @@ fluid.tests.couchConfig.testDbView = function (dbName, couchUrl, expectedView, c
 
     db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
-            console.log(actualDesignDoc);
             fluid.tests.couchConfig.compareFunctions("The actual view map function is the same as expected", expectedView.testViews.test.map, actualDesignDoc.test.map);
             fluid.tests.couchConfig.compareFunctions("The actual view reduce function is the same as expected", expectedView.testViews.test.reduce, actualDesignDoc.test.reduce);
             fluid.tests.couchConfig.compareFunctions("The actual validate function is the same as expected", expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update);
