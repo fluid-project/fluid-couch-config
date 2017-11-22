@@ -18,12 +18,12 @@ require("../../src/couchConfig");
 fluid.defaults("fluid.couchConfig.example", {
     gradeNames: ["fluid.couchConfig.pipeline"],
     couchOptions: {
-        dbName: "test-fluid-couch-config-db"
+        dbName: "basic-fluid-couch-config-db"
     },
     listeners: {
         onCreate: "{that}.configureCouch",
         onSuccess: "console.log(SUCCESS)",
-        onError: "console.log({arguments}.0)"
+        onError: "console.log({arguments}.0.message)"
     },
     dbDocuments: {
         test1: {

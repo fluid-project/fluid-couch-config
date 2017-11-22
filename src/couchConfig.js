@@ -189,7 +189,7 @@ fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (viewsColl
 fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
     var togo = fluid.promise();
 
-    targetDb.insert(doc, id, function (err, body) {
+    targetDb.insert(doc, id, function (err) {
         if (!err) {
             console.log("Document " + id + " inserted successfully");
             togo.resolve();
@@ -197,7 +197,7 @@ fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
             console.log("Error in inserting document " + id);
             togo.reject({
                 isError: true,
-                message: err + " " + body,
+                message: err + ", document ID: " + id,
                 statusCode: err.statusCode
             });
         }

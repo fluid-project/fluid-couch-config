@@ -72,7 +72,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     events: {
         nanoCallBackDone: null
     },
-    // TODO: ensure all tests are run on a fresh database with nothing in it
+    // TODO: ensure all tests are run on a fresh database with nothing in it (currently not)
     // TODO: check that CouchDB will have a new _rev for updating an identical document
     modules: [{
         name: "Test couch config.",
@@ -87,7 +87,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
         },
         {
             name: "Test CouchDB design document loading",
-            expect: 6,
+            expect: 7,
             sequence: [{
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
@@ -125,6 +125,67 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["End of test sequence"]
+            }]
+        },
+        {
+            // If the document is identical, it shouldn't update it
+            // TODO: add checking of _rev keys to make sure they don't change.
+            name: "Test CouchDB duplicate document loading",
+            expect: 4,
+            sequence: [{
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["End of test sequence"]
+            }]
+        },
+        {
+            // If the document is different but ID is identical, it should update it
+            name: "Test CouchDB differing document loading on identical IDs",
+            expect: 4,
+            sequence: [{
+                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database create/verify was completed successfully"]
+            },
+            {
+                func: "fluid.tests.couchConfig.insertDocumentManually",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "fluid.tests.couchConfig.verifyDbDocumentNotEquals",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc2",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc2",
                     "{that}.events.nanoCallBackDone"]
             },
             {
@@ -215,7 +276,8 @@ fluid.tests.couchConfig.verifyDbView = function (dbName, couchUrl, expectedView,
         if (!err) {
             fluid.tests.couchConfig.compareFunctions("The actual view map function is the same as expected", expectedView.testViews.test.map, actualDesignDoc.test.map);
             fluid.tests.couchConfig.compareFunctions("The actual view reduce function is the same as expected", expectedView.testViews.test.reduce, actualDesignDoc.test.reduce);
-            fluid.tests.couchConfig.compareFunctions("The actual validate function is the same as expected", expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update);
+            fluid.tests.couchConfig.compareFunctions("The actual view inline-specified function is the same as expected", expectedView.testViews.test2.map, actualDesignDoc.test2.map);
+            fluid.tests.couchConfig.compareFunctions("The actual validate_doc_update function is the same as expected", expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update);
         }
 
         completionEvent.fire();
@@ -223,8 +285,16 @@ fluid.tests.couchConfig.verifyDbView = function (dbName, couchUrl, expectedView,
 };
 
 fluid.tests.couchConfig.compareFunctions = function (message, expectedFunction, actualFunction) {
-    //calling toString makes the line breaks \n's instead of whatever they were before
-    var expectedFunctionBody = fluid.getGlobalValue(expectedFunction).toString();
+    var expectedFunctionBody = (function (func) {
+        if (typeof func === "function") {
+            return func.toString();
+        }
+        if (typeof func === "string") {
+            var namedFunc = fluid.getGlobalValue(func);
+            return namedFunc.toString();
+        }
+    })(expectedFunction);
+
     var actualFunctionBody = actualFunction.toString();
 
     jqUnit.assertEquals(message, expectedFunctionBody, actualFunctionBody);
