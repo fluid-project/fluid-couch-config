@@ -61,7 +61,6 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
                 map: "fluid.tests.couchConfig.testMapFunction",
                 reduce: "fluid.tests.couchConfig.testReduceFunction"
             },
-            // TODO: add verification for functions specified inline
             test2: {
                 map: function (doc) {
                     emit(doc, null);
@@ -72,13 +71,43 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
     }
 });
 
+fluid.defaults("fluid.tests.couchConfig.dbCreateSequenceElement", {
+    gradeNames: "fluid.test.sequenceElement",
+    sequence: [{
+        "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
+        "resolve": "jqUnit.assert",
+        "resolveArgs": ["Database create/verify was completed successfully"]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.dbDestroySequenceElement", {
+    gradeNames: "fluid.test.sequenceElement",
+    sequence: [{
+        "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+        "resolve": "jqUnit.assert",
+        "resolveArgs": ["Database destroy was completed successfully"]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.dbSetupSequence", {
+    gradeNames: "fluid.test.sequence",
+    sequenceElements: {
+        dbCreate: {
+            gradeNames: "fluid.tests.couchConfig.dbCreateSequenceElement",
+            priority: "before:sequence"
+        },
+        dbDestroy: {
+            gradeNames: "fluid.tests.couchConfig.dbDestroySequenceElement",
+            priority: "after:sequence"
+        }
+    }
+});
+
 fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     gradeNames: ["fluid.test.testCaseHolder"],
     events: {
         nanoCallBackDone: null
     },
-    // TODO: ensure all tests are run on a fresh database with nothing in it (currently not)
-    // TODO: check that CouchDB will have a new _rev for updating an identical document
     modules: [{
         name: "Test couch config.",
         tests: [{
@@ -102,20 +131,12 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
         },
         {
             name: "Test CouchDB design document loading",
-            expect: 8,
+            expect: 7,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
             sequence: [{
-                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database create/verify was completed successfully"]
-            },
-            {
                 "task": "{couchConfigTest}.couchConfig.updateDesignDocumentAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database design document were created/updated successfully"]
-            },
-            {
-                "func": "fluid.tests.couchConfig.verifyDbView",
-                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                "resolve": "fluid.tests.couchConfig.verifyDbViewEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
                     "{that}.events.nanoCallBackDone"]
@@ -124,22 +145,13 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
                 args: ["Design document verification completed"]
-            },
-            {
-                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
             name: "Test CouchDB document loading",
             expect: 5,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
             sequence: [{
-                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database create/verify was completed successfully"]
-            },
-            {
                 "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
                 "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
                 "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
@@ -151,11 +163,6 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
                 args: ["Document verification completed"]
-            },
-            {
-                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
@@ -163,12 +170,8 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             // TODO: add checking of _rev keys to make sure they don't change either
             name: "Test CouchDB duplicate document loading",
             expect: 8,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
             sequence: [{
-                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database create/verify was completed successfully"]
-            },
-            {
                 "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
                 "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
                 "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
@@ -193,23 +196,14 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
                 args: ["Subsequent document verification completed"]
-            },
-            {
-                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
             // If the document is different but ID is identical, it should update it
             name: "Test CouchDB differing document loading on identical IDs",
             expect: 8,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
             sequence: [{
-                "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database create/verify was completed successfully"]
-            },
-            {
                 func: "fluid.tests.couchConfig.insertTestDocumentManually",
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
@@ -240,11 +234,74 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
                 args: ["Subsequent document verification completed"]
+            }]
+        },
+        {
+            name: "Test CouchDB duplicate design document loading",
+            expect: 12,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
+            sequence: [{
+                "task": "{couchConfigTest}.couchConfig.updateDesignDocumentAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbViewEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
+                    "{that}.events.nanoCallBackDone"]
             },
             {
-                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
-                "resolve": "jqUnit.assert",
-                "resolveArgs": ["Database destroy was completed successfully"]
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Primary design document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDesignDocumentAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbViewEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Subsequent design document verification completed"]
+            }]
+        },
+        {
+            name: "Test CouchDB differing design document loading on identical IDs",
+            expect: 12,
+            sequenceGrade: "fluid.tests.couchConfig.dbSetupSequence",
+            sequence: [{
+                func: "fluid.tests.couchConfig.insertTestDesignDocumentManually",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "fluid.tests.couchConfig.verifyDbViewNotEquals",
+                args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Primary design document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDesignDocumentAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbViewEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDesignDocuments",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Subsequent design document verification completed"]
             }]
         }]
     }]
@@ -271,24 +328,21 @@ fluid.tests.couchConfig.testReduceFunction = function (keys, values, rereduce) {
     return sum(values);
 };
 
-fluid.tests.couchConfig.verifyDbDocumentEquals = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
-    var nano = require("nano")(couchUrl);
-    var db = nano.use(dbName);
-
-    db.get("testDoc", function (err, actualTestDoc) {
-        if (!err) {
-            jqUnit.assertEquals("The actual test document key is the same as expected", expectedTestDoc.key, actualTestDoc.key);
-            jqUnit.assertDeepEq("The actual test document array is the same as expected", expectedTestDoc.arrayKey, actualTestDoc.arrayKey);
-        }
-
-        completionEvent.fire();
-    });
-};
-
 var preExistingTestDoc = {
     "type": "test",
     "key": "valueDifferent",
     "arrayKey": ["different", "values", "in", "an", "array"]
+};
+
+var preExistingTestDesignDoc = {
+    test: {
+        map: "function (doc) {if (doc.key) {emit(doc.key, null);}}",
+        reduce: "function (keys, values, rereduce) {return sum(values);}"
+    },
+    test2: {
+        map: "function (differentDoc) {emit(differentDoc, null);}"
+    },
+    validate_doc_update: "function (newDoc, oldDoc, userCtx) { throw ({forbidden: \"It's not a test document\"});}"
 };
 
 fluid.tests.couchConfig.insertTestDocumentManually = function (dbName, couchUrl, completionEvent) {
@@ -307,14 +361,44 @@ fluid.tests.couchConfig.insertTestDocumentManually = function (dbName, couchUrl,
     });
 };
 
+fluid.tests.couchConfig.insertTestDesignDocumentManually = function (dbName, couchUrl, completionEvent) {
+    var nano = require("nano")(couchUrl);
+    var db = nano.use(dbName);
+
+    // manually insert to the ID of a document that is already defined in the configuration
+    db.insert(preExistingTestDesignDoc, "_design/testViews", function (err) {
+        if (!err) {
+            fluid.log("Document _design/testViews inserted successfully");
+        } else {
+            fluid.log("Error " + err.statusCode + " in inserting document _design/testViews:" + err);
+        }
+
+        completionEvent.fire();
+    });
+};
+
+fluid.tests.couchConfig.verifyDbDocumentEquals = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+    var nano = require("nano")(couchUrl);
+    var db = nano.use(dbName);
+
+    db.get("testDoc", function (err, actualTestDoc) {
+        if (!err) {
+            jqUnit.assertEquals("The actual test document key is the same as expected", expectedTestDoc.key, actualTestDoc.key);
+            jqUnit.assertDeepEq("The actual test document array is the same as expected", expectedTestDoc.arrayKey, actualTestDoc.arrayKey);
+        }
+
+        completionEvent.fire();
+    });
+};
+
 fluid.tests.couchConfig.verifyDbDocumentNotEquals = function (dbName, couchUrl, unexpectedTestDoc, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
     db.get("testDoc", function (err, actualTestDoc) {
         if (!err) {
-            jqUnit.assertNotEquals("The actual test document key is different from expected", unexpectedTestDoc.key, actualTestDoc.key);
-            jqUnit.assertDeepNeq("The actual test document array is different from expected", unexpectedTestDoc.arrayKey, actualTestDoc.arrayKey);
+            jqUnit.assertNotEquals("The actual test document key is different from unexpected", unexpectedTestDoc.key, actualTestDoc.key);
+            jqUnit.assertDeepNeq("The actual test document array is different from unexpected", unexpectedTestDoc.arrayKey, actualTestDoc.arrayKey);
         } else {
             jqUnit.fail(err);
         }
@@ -323,23 +407,39 @@ fluid.tests.couchConfig.verifyDbDocumentNotEquals = function (dbName, couchUrl, 
     });
 };
 
-fluid.tests.couchConfig.verifyDbView = function (dbName, couchUrl, expectedView, completionEvent) {
+fluid.tests.couchConfig.verifyDbViewEquals = function (dbName, couchUrl, expectedView, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
     db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
-            fluid.tests.couchConfig.compareFunctions("The actual view map function is the same as expected", expectedView.testViews.test.map, actualDesignDoc.test.map);
-            fluid.tests.couchConfig.compareFunctions("The actual view reduce function is the same as expected", expectedView.testViews.test.reduce, actualDesignDoc.test.reduce);
-            fluid.tests.couchConfig.compareFunctions("The actual view inline-specified function is the same as expected", expectedView.testViews.test2.map, actualDesignDoc.test2.map);
-            fluid.tests.couchConfig.compareFunctions("The actual validate_doc_update function is the same as expected", expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update);
+            jqUnit.assertTrue("The actual view map function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test.map, actualDesignDoc.test.map));
+            jqUnit.assertTrue("The actual view reduce function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test.reduce, actualDesignDoc.test.reduce));
+            jqUnit.assertTrue("The actual view inline-specified function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test2.map, actualDesignDoc.test2.map));
+            jqUnit.assertTrue("The actual validate_doc_update function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update));
         }
 
         completionEvent.fire();
     });
 };
 
-fluid.tests.couchConfig.compareFunctions = function (message, expectedFunction, actualFunction) {
+fluid.tests.couchConfig.verifyDbViewNotEquals = function (dbName, couchUrl, unexpectedView, completionEvent) {
+    var nano = require("nano")(couchUrl);
+    var db = nano.use(dbName);
+
+    db.get("_design/testViews", function (err, actualDesignDoc) {
+        if (!err) {
+            jqUnit.assertFalse("The actual view map function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test.map, actualDesignDoc.test.map));
+            jqUnit.assertFalse("The actual view reduce function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test.reduce, actualDesignDoc.test.reduce));
+            jqUnit.assertFalse("The actual view inline-specified function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test2.map, actualDesignDoc.test2.map));
+            jqUnit.assertFalse("The actual validate_doc_update function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update));
+        }
+
+        completionEvent.fire();
+    });
+};
+
+fluid.tests.couchConfig.functionsAreIdentical = function (expectedFunction, actualFunction) {
     var expectedFunctionBody = (function (func) {
         if (typeof func === "function") {
             return func.toString();
@@ -352,7 +452,7 @@ fluid.tests.couchConfig.compareFunctions = function (message, expectedFunction, 
 
     var actualFunctionBody = actualFunction.toString();
 
-    jqUnit.assertEquals(message, expectedFunctionBody, actualFunctionBody);
+    return expectedFunctionBody === actualFunctionBody;
 };
 
 fluid.defaults("fluid.tests.couchConfig.couchConfigTest", {
