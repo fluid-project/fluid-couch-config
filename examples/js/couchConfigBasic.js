@@ -22,8 +22,8 @@ fluid.defaults("fluid.couchConfig.example", {
     },
     listeners: {
         onCreate: "{that}.configureCouch",
-        onSuccess: "console.log(SUCCESS)",
-        onError: "console.log({arguments}.0.message)"
+        onSuccess: "fluid.log(SUCCESS)",
+        onError: "fluid.log({arguments}.0.message)"
     },
     dbDocuments: {
         test1: {

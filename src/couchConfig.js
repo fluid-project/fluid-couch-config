@@ -141,6 +141,44 @@ fluid.couchConfig.createDbIfNotExist.doAction = function (payload, options) {
     return togo;
 };
 
+fluid.defaults("fluid.couchConfig.destroyDbIfExist", {
+    gradeNames: "fluid.couchConfig.action",
+    invokers: {
+        doAction: {
+            funcName: "fluid.couchConfig.destroyDbIfExist.doAction",
+            args: [{}, "{couchConfig}.options"]
+        }
+    }
+});
+
+fluid.couchConfig.destroyDbIfExist.doAction = function (payload, options) {
+    var togo = fluid.promise();
+
+    console.log("Making sure DB " + options.couchOptions.dbName + " no longer exists in Couch instance at " + options.couchOptions.couchUrl);
+    var nano = require("nano")(options.couchOptions.couchUrl);
+
+    nano.db.destroy(options.couchOptions.dbName, function (err) {
+        if (!err) {
+            console.log("DB " + options.couchOptions.dbName + " no longer exists");
+            togo.resolve(payload);
+        } else {
+            if (err.statusCode === 404) {
+                console.log("DB " + options.couchOptions.dbName + " does not exist, nothing to destroy");
+                togo.resolve(payload);
+            } else {
+                console.log("Could not get information about DB " + options.couchOptions.dbName + ", destroy not successful.");
+                togo.reject({
+                    isError: true,
+                    message: err,
+                    statusCode: err.statusCode
+                });
+            }
+        }
+    });
+
+    return togo;
+};
+
 fluid.defaults("fluid.couchConfig.updateDesignDocument", {
     gradeNames: "fluid.couchConfig.action",
     invokers: {
@@ -194,7 +232,7 @@ fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
             console.log("Document " + id + " inserted successfully");
             togo.resolve();
         } else {
-            console.log("Error in inserting document " + id);
+            console.log("Error in inserting document " + id + ", " + err);
             togo.reject({
                 isError: true,
                 message: err + ", document ID: " + id,

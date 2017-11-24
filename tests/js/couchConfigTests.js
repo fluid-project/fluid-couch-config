@@ -28,10 +28,15 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
         couchUrl: "http://localhost:6789",
         dbName: "test-fluid-couch-config-db"
     },
+    components: {
+        destroyDbIfExist: {
+            type: "fluid.couchConfig.destroyDbIfExist"
+        }
+    },
     listeners: {
         onCreate: "fluid.identity",
-        onSuccess: "console.log(SUCCESS)",
-        onError: "console.log({arguments}.0)"
+        onSuccess: "fluid.log(SUCCESS)",
+        onError: "fluid.log({arguments}.0)"
     },
     dbDocuments: {
         testDoc: {
@@ -86,8 +91,18 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             }]
         },
         {
+            name: "Test CouchDB destruction",
+            expect: 1,
+            sequence: [{
+                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database destroy was completed successfully"]
+            }]
+            // TODO: determine what occurs when destroy is called again
+        },
+        {
             name: "Test CouchDB design document loading",
-            expect: 7,
+            expect: 8,
             sequence: [{
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
@@ -108,12 +123,17 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
-                args: ["End of test sequence"]
+                args: ["Design document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
             name: "Test CouchDB document loading",
-            expect: 4,
+            expect: 5,
             sequence: [{
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
@@ -130,14 +150,19 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
-                args: ["End of test sequence"]
+                args: ["Document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
             // If the document is identical, it shouldn't update it
-            // TODO: add checking of _rev keys to make sure they don't change.
+            // TODO: add checking of _rev keys to make sure they don't change either
             name: "Test CouchDB duplicate document loading",
-            expect: 4,
+            expect: 8,
             sequence: [{
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
@@ -154,20 +179,38 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
             {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
-                args: ["End of test sequence"]
+                args: ["Primary document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
+                "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
+                "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
+                    "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
+                    "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Subsequent document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         },
         {
             // If the document is different but ID is identical, it should update it
             name: "Test CouchDB differing document loading on identical IDs",
-            expect: 4,
+            expect: 8,
             sequence: [{
                 "task": "{couchConfigTest}.couchConfig.createDbIfNotExistAction.doAction",
                 "resolve": "jqUnit.assert",
                 "resolveArgs": ["Database create/verify was completed successfully"]
             },
             {
-                func: "fluid.tests.couchConfig.insertDocumentManually",
+                func: "fluid.tests.couchConfig.insertTestDocumentManually",
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
                     "{that}.events.nanoCallBackDone"]
@@ -177,21 +220,31 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
                 "listener": "fluid.tests.couchConfig.verifyDbDocumentNotEquals",
                 args: ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
-                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc2",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
                     "{that}.events.nanoCallBackDone"]
+            },
+            {
+                "event": "{that}.events.nanoCallBackDone",
+                "listener": "jqUnit.assert",
+                args: ["Primary document verification completed"]
             },
             {
                 "task": "{couchConfigTest}.couchConfig.updateDocumentsAction.doAction",
                 "resolve": "fluid.tests.couchConfig.verifyDbDocumentEquals",
                 "resolveArgs": ["{couchConfigTest}.couchConfig.options.couchOptions.dbName",
                     "{couchConfigTest}.couchConfig.options.couchOptions.couchUrl",
-                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc2",
+                    "{couchConfigTest}.couchConfig.options.dbDocuments.testDoc",
                     "{that}.events.nanoCallBackDone"]
             },
             {
                 "event": "{that}.events.nanoCallBackDone",
                 "listener": "jqUnit.assert",
-                args: ["End of test sequence"]
+                args: ["Subsequent document verification completed"]
+            },
+            {
+                "task": "{couchConfigTest}.couchConfig.destroyDbIfExist.doAction",
+                "resolve": "jqUnit.assert",
+                "resolveArgs": ["Database destroy was completed successfully"]
             }]
         }]
     }]
@@ -232,36 +285,38 @@ fluid.tests.couchConfig.verifyDbDocumentEquals = function (dbName, couchUrl, exp
     });
 };
 
-var preExistingTestDoc2 = {
+var preExistingTestDoc = {
     "type": "test",
     "key": "valueDifferent",
     "arrayKey": ["different", "values", "in", "an", "array"]
 };
 
-fluid.tests.couchConfig.insertDocumentManually = function (dbName, couchUrl, completionEvent) {
+fluid.tests.couchConfig.insertTestDocumentManually = function (dbName, couchUrl, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
     // manually insert to the ID of a document that is already defined in the configuration
-    db.insert(preExistingTestDoc2, "testDoc2", function (err) {
+    db.insert(preExistingTestDoc, "testDoc", function (err) {
         if (!err) {
-            console.log("Document testDoc2 inserted successfully");
+            fluid.log("Document testDoc inserted successfully");
         } else {
-            console.log("Error " + err.statusCode + " in inserting document testDoc2");
+            fluid.log("Error " + err.statusCode + " in inserting document testDoc:" + err);
         }
 
         completionEvent.fire();
     });
 };
 
-fluid.tests.couchConfig.verifyDbDocumentNotEquals = function (dbName, couchUrl, expectedTestDoc, completionEvent) {
+fluid.tests.couchConfig.verifyDbDocumentNotEquals = function (dbName, couchUrl, unexpectedTestDoc, completionEvent) {
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
     db.get("testDoc", function (err, actualTestDoc) {
         if (!err) {
-            jqUnit.assertNotEquals("The actual test document key is different from expected", expectedTestDoc.key, actualTestDoc.key);
-            jqUnit.assertDeepNeq("The actual test document array is different from expected", expectedTestDoc.arrayKey, actualTestDoc.arrayKey);
+            jqUnit.assertNotEquals("The actual test document key is different from expected", unexpectedTestDoc.key, actualTestDoc.key);
+            jqUnit.assertDeepNeq("The actual test document array is different from expected", unexpectedTestDoc.arrayKey, actualTestDoc.arrayKey);
+        } else {
+            jqUnit.fail(err);
         }
 
         completionEvent.fire();
