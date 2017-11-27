@@ -10,8 +10,9 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 "use strict";
 
 var fluid = require("infusion");
+fluid.setLogging(true);
+
 var isEqual = require("underscore").isEqual;
-//var size = require("underscore").size;
 
 fluid.defaults("fluid.couchConfig", {
     gradeNames: "fluid.component",
@@ -104,22 +105,22 @@ fluid.defaults("fluid.couchConfig.createDbIfNotExist", {
 fluid.couchConfig.createDbIfNotExist.doAction = function (payload, options) {
     var togo = fluid.promise();
 
-    console.log("Making sure DB " + options.couchOptions.dbName + " exists in Couch instance at " + options.couchOptions.couchUrl);
+    fluid.log("Making sure DB " + options.couchOptions.dbName + " exists in Couch instance at " + options.couchOptions.couchUrl);
     var nano = require("nano")(options.couchOptions.couchUrl);
 
     nano.db.get(options.couchOptions.dbName, function (err, body) {
         if (!err) {
-            console.log("DB " + options.couchOptions.dbName + " exists");
+            fluid.log("DB " + options.couchOptions.dbName + " exists");
             togo.resolve(payload);
         } else {
             if (err.statusCode === 404) {
-                console.log("DB does not exist, trying to create");
+                fluid.log("DB does not exist, trying to create");
                 nano.db.create(options.couchOptions.dbName, function (err, body) {
                     if (!err) {
-                        console.log("DB " + options.couchOptions.dbName + " created");
+                        fluid.log("DB " + options.couchOptions.dbName + " created");
                         togo.resolve(payload);
                     } else {
-                        console.log("DB " + options.couchOptions.dbName + " could not be created");
+                        fluid.log("DB " + options.couchOptions.dbName + " could not be created");
                         togo.reject({
                             isError: true,
                             message: err + " " + body,
@@ -128,7 +129,7 @@ fluid.couchConfig.createDbIfNotExist.doAction = function (payload, options) {
                     }
                 });
             } else {
-                console.log("Could not get information about DB " + options.couchOptions.dbName);
+                fluid.log("Could not get information about DB " + options.couchOptions.dbName);
                 togo.reject({
                     isError: true,
                     message: err + " " + body,
@@ -154,19 +155,19 @@ fluid.defaults("fluid.couchConfig.destroyDbIfExist", {
 fluid.couchConfig.destroyDbIfExist.doAction = function (payload, options) {
     var togo = fluid.promise();
 
-    console.log("Making sure DB " + options.couchOptions.dbName + " no longer exists in Couch instance at " + options.couchOptions.couchUrl);
+    fluid.log("Making sure DB " + options.couchOptions.dbName + " no longer exists in Couch instance at " + options.couchOptions.couchUrl);
     var nano = require("nano")(options.couchOptions.couchUrl);
 
     nano.db.destroy(options.couchOptions.dbName, function (err) {
         if (!err) {
-            console.log("DB " + options.couchOptions.dbName + " no longer exists");
+            fluid.log("DB " + options.couchOptions.dbName + " no longer exists");
             togo.resolve(payload);
         } else {
             if (err.statusCode === 404) {
-                console.log("DB " + options.couchOptions.dbName + " does not exist, nothing to destroy");
+                fluid.log("DB " + options.couchOptions.dbName + " does not exist, nothing to destroy");
                 togo.resolve(payload);
             } else {
-                console.log("Could not get information about DB " + options.couchOptions.dbName + ", destroy not successful.");
+                fluid.log("Could not get information about DB " + options.couchOptions.dbName + ", destroy not successful.");
                 togo.reject({
                     isError: true,
                     message: err,
@@ -229,10 +230,10 @@ fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
 
     targetDb.insert(doc, id, function (err) {
         if (!err) {
-            console.log("Document " + id + " inserted successfully");
+            fluid.log("Document " + id + " inserted successfully");
             togo.resolve();
         } else {
-            console.log("Error in inserting document " + id + ", " + err);
+            fluid.log("Error in inserting document " + id + ", " + err);
             togo.reject({
                 isError: true,
                 message: err + ", document ID: " + id,
@@ -249,20 +250,20 @@ fluid.couchConfig.action.updateSingleDocument = function (targetDb, doc, id) {
 
     targetDb.get(id, function (err, body) {
         if (!err) {
-            console.log("Existing document " + id + " found");
+            fluid.log("Existing document " + id + " found");
 
             var existingDocValues = fluid.censorKeys(body, ["_id", "_rev"]);
 
             if (isEqual(doc, existingDocValues)) {
-                console.log("Document " + id + " unchanged from existing in CouchDB, not updating");
+                fluid.log("Document " + id + " unchanged from existing in CouchDB, not updating");
                 togo.resolve();
             } else {
-                console.log("Document " + id + " has been changed, attempting to update");
+                fluid.log("Document " + id + " has been changed, attempting to update");
                 doc._rev = body._rev; // Including the _rev indicates an update
                 fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, doc, id), togo);
             }
         } else {
-            console.log("Document " + id + " not found, creating");
+            fluid.log("Document " + id + " not found, creating");
             fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, doc, id), togo);
         }
     });
@@ -274,7 +275,7 @@ fluid.couchConfig.action.updateDocuments = function (payload, options, docs) {
     var togo = fluid.promise();
 
     if (isEqual(docs, {})) {
-        console.log("No documents to update");
+        fluid.log("No documents to update");
         togo.resolve(payload);
         return togo;
     }
@@ -284,7 +285,7 @@ fluid.couchConfig.action.updateDocuments = function (payload, options, docs) {
 
     var promises = [];
     fluid.each(docs, function (doc, id) {
-        console.log(fluid.stringTemplate("Updating document at %dbName/%id", { dbName: options.couchOptions.dbName, id: id }));
+        fluid.log(fluid.stringTemplate("Updating document at %dbName/%id", { dbName: options.couchOptions.dbName, id: id }));
         promises.push(fluid.couchConfig.action.updateSingleDocument(targetDb, doc, id));
     });
 
