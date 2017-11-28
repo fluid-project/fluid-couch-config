@@ -28,11 +28,11 @@ fluid.defaults("fluid.couchConfig", {
     dbDesignDocuments: {
         // An object whose keys are the names of design documents to be
         // created in the database. Each design document can have a
-        // collection of zero or more views, where the keys are the names
-        // of each view. Each view would in turn have the keys "map" and
-        // "reduce", which are function references or function names for
-        // functions accessible by couchConfig. These functions, internally,
-        // can only refer to other functions known to CouchDB.
+        // collection of zero or more views under the key 'views', where th
+        // keys are the name of each view. Each view would in turn have the
+        // keys "map" and "reduce", which are function references or function
+        // names for functions accessible by couchConfig. These functions,
+        // internally, can only refer to other functions known to CouchDB.
         // http://guide.couchdb.org/editions/1/en/views.html
         // TODO: verify that this last claim is accurate
 
@@ -46,13 +46,15 @@ fluid.defaults("fluid.couchConfig", {
 
         // for example:
         // designDocumentName: {
-        //     someViewFunction: {
-        //         map: "reference.to.a.function",
-        //         reduce: "reference.to.another.function"
-        //     },
-        //     anotherViewFunction: {
-        //         map: "reference.to.yet.another.function",
-        //         reduce: "reference.to.still.another.function"
+        //     views: {
+        //         someViewFunction: {
+        //             map: "reference.to.a.function",
+        //             reduce: "reference.to.another.function"
+        //         },
+        //         anotherViewFunction: {
+        //             map: "reference.to.yet.another.function",
+        //             reduce: "reference.to.still.another.function"
+        //         }
         //     },
         //     validate_doc_update: "a.validation.function"
         // }
