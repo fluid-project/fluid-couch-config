@@ -57,13 +57,15 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
     },
     dbDesignDocuments: {
         testViews: {
-            test: {
-                map: "fluid.tests.couchConfig.testMapFunction",
-                reduce: "fluid.tests.couchConfig.testReduceFunction"
-            },
-            test2: {
-                map: function (doc) {
-                    emit(doc, null);
+            views: {
+                test: {
+                    map: "fluid.tests.couchConfig.testMapFunction",
+                    reduce: "fluid.tests.couchConfig.testReduceFunction"
+                },
+                test2: {
+                    map: function (doc) {
+                        emit(doc, null);
+                    }
                 }
             },
             validate_doc_update: "fluid.tests.couchConfig.testValidateFunction"
@@ -335,12 +337,14 @@ var preExistingTestDoc = {
 };
 
 var preExistingTestDesignDoc = {
-    test: {
-        map: "function (doc) {if (doc.key) {emit(doc.key, null);}}",
-        reduce: "function (keys, values, rereduce) {return sum(values);}"
-    },
-    test2: {
-        map: "function (differentDoc) {emit(differentDoc, null);}"
+    views: {
+        test: {
+            map: "function (doc) {if (doc.key) {emit(doc.key, null);}}",
+            reduce: "function (keys, values, rereduce) {return sum(values);}"
+        },
+        test2: {
+            map: "function (differentDoc) {emit(differentDoc, null);}"
+        }
     },
     validate_doc_update: "function (newDoc, oldDoc, userCtx) { throw ({forbidden: \"It's not a test document\"});}"
 };
@@ -411,11 +415,11 @@ fluid.tests.couchConfig.verifyDbViewEquals = function (dbName, couchUrl, expecte
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
-    db.get("_design/testViews", function (err, actualDesignDoc) {
+    db.get("_design/testViews", function (err, actualDesignDoc) {        
         if (!err) {
-            jqUnit.assertTrue("The actual view map function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test.map, actualDesignDoc.test.map));
-            jqUnit.assertTrue("The actual view reduce function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test.reduce, actualDesignDoc.test.reduce));
-            jqUnit.assertTrue("The actual view inline-specified function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.test2.map, actualDesignDoc.test2.map));
+            jqUnit.assertTrue("The actual view map function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.map, actualDesignDoc.views.test.map));
+            jqUnit.assertTrue("The actual view reduce function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.reduce, actualDesignDoc.views.test.reduce));
+            jqUnit.assertTrue("The actual view inline-specified function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test2.map, actualDesignDoc.views.test2.map));
             jqUnit.assertTrue("The actual validate_doc_update function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update));
         }
 
@@ -429,9 +433,9 @@ fluid.tests.couchConfig.verifyDbViewNotEquals = function (dbName, couchUrl, unex
 
     db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
-            jqUnit.assertFalse("The actual view map function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test.map, actualDesignDoc.test.map));
-            jqUnit.assertFalse("The actual view reduce function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test.reduce, actualDesignDoc.test.reduce));
-            jqUnit.assertFalse("The actual view inline-specified function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.test2.map, actualDesignDoc.test2.map));
+            jqUnit.assertFalse("The actual view map function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.views.test.map, actualDesignDoc.views.test.map));
+            jqUnit.assertFalse("The actual view reduce function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.views.test.reduce, actualDesignDoc.views.test.reduce));
+            jqUnit.assertFalse("The actual view inline-specified function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.views.test2.map, actualDesignDoc.views.test2.map));
             jqUnit.assertFalse("The actual validate_doc_update function is different from unexpected", fluid.tests.couchConfig.functionsAreIdentical(unexpectedView.testViews.validate_doc_update, actualDesignDoc.validate_doc_update));
         }
 

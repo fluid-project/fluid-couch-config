@@ -206,23 +206,24 @@ fluid.couchConfig.updateDesignDocument.renderFunctionString = function (func) {
     }
 };
 
-fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (viewsCollection) {
-    var transformedViews = fluid.transform(viewsCollection, function (desiredView, viewKey) {
+fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (designDocument) {
+    var transformedDesignDocument = fluid.transform(designDocument, function (obj, key) {
         // The special-case validate_doc_update function
-        if (viewKey && viewKey === "validate_doc_update") {
-            return fluid.couchConfig.updateDesignDocument.renderFunctionString(desiredView);
-        } else {
-            return fluid.transform(desiredView, function (viewFunc, funcKey) {
-                // The internal CouchDB reduce functions
-                if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
-                    return viewFunc;
-                }
-
-                return fluid.couchConfig.updateDesignDocument.renderFunctionString(viewFunc);
+        if (key && key === "validate_doc_update") {
+            return fluid.couchConfig.updateDesignDocument.renderFunctionString(obj);
+        } else if (key && key === "views"){
+            return fluid.transform(obj, function (desiredView) {
+                return fluid.transform(desiredView, function (viewFunc, funcKey) {
+                    // The internal CouchDB reduce functions
+                    if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
+                        return viewFunc;
+                    }
+                    return fluid.couchConfig.updateDesignDocument.renderFunctionString(viewFunc);
+                });
             });
         }
     });
-    return transformedViews;
+    return transformedDesignDocument;
 };
 
 fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
