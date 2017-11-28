@@ -64,7 +64,7 @@ fluid.couchConfig.example.docIdsWithTitlesMapFunction = function (doc) {
     emit(doc._id, doc.title);
 };
 
-// http://localhost:5984/test/_design/views/_view/tagCount?group=true
+// http://localhost:5984/basic-fluid-couch-config-db/_design/exampleDesignDocument/_view/tagCount?group=true
 fluid.couchConfig.example.tagCountMapFunction = function (doc) {
     if (doc.tags.length > 0) {
         for (var idx in doc.tags) {
