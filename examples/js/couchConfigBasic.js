@@ -44,16 +44,19 @@ fluid.defaults("fluid.couchConfig.example", {
         }
     },
     dbDesignDocuments: {
-        views: {
-            docIdsWithTitles: {
-                map: "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
-            },
-            tagCount: {
-                map: "fluid.couchConfig.example.tagCountMapFunction",
-                reduce: "fluid.couchConfig.example.tagCountReduceFunction"
+        exampleDesignDocument: {
+            views: {
+                docIdsWithTitles: {
+                    map: "fluid.couchConfig.example.docIdsWithTitlesMapFunction"
+                },
+                tagCount: {
+                    map: "fluid.couchConfig.example.tagCountMapFunction",
+                    reduce: "fluid.couchConfig.example.tagCountReduceFunction"
+                }
             },
             validate_doc_update: "fluid.couchConfig.example.validateFunction"
         }
+
     }
 });
 
