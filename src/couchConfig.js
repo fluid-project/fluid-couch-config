@@ -19,43 +19,45 @@ fluid.defaults("fluid.couchConfig", {
     couchOptions: {
         couchUrl: "http://localhost:5984",
         dbName: null, // To be provided
-        dbDocuments: {
-            // An object whose keys are the IDs of documents to
-            // be created in the database, and the values are the documents
-            // themselves.
-        },
-        dbDesignDocuments: {
-            // An object whose keys are the names of design documents to be
-            // created in the database. Each design document can have a
-            // collection of zero or more views, where the keys are the names
-            // of each view. Each view would in turn have the keys "map" and
-            // "reduce", which are function references or function names for
-            // functions accessible by couchConfig. These functions, internally,
-            // can only refer to other functions known to CouchDB.
-            // http://guide.couchdb.org/editions/1/en/views.html
-            // TODO: verify that this last claim is accurate
+    },
+    dbDocuments: {
+        // An object whose keys are the IDs of documents to
+        // be created in the database, and the values are the documents
+        // themselves.
+    },
+    dbDesignDocuments: {
+        // An object whose keys are the names of design documents to be
+        // created in the database. Each design document can have a
+        // collection of zero or more views under the key 'views', where th
+        // keys are the name of each view. Each view would in turn have the
+        // keys "map" and "reduce", which are function references or function
+        // names for functions accessible by couchConfig. These functions,
+        // internally, can only refer to other functions known to CouchDB.
+        // http://guide.couchdb.org/editions/1/en/views.html
+        // TODO: verify that this last claim is accurate
 
-            // Additionally, "reduce" may specify by name one of the three
-            // built-in reduce functions: "_sum", "_count", or "_stats"
-            // https://wiki.apache.org/couchdb/Built-In_Reduce_Functions
+        // Additionally, "reduce" may specify by name one of the three
+        // built-in reduce functions: "_sum", "_count", or "_stats"
+        // https://wiki.apache.org/couchdb/Built-In_Reduce_Functions
 
-            // Each design document may also have up to one validate_doc_update
-            // function, and must conform to this specification:
-            // http://guide.couchdb.org/editions/1/en/validation.html
+        // Each design document may also have up to one validate_doc_update
+        // function, and must conform to this specification:
+        // http://guide.couchdb.org/editions/1/en/validation.html
 
-            // for example:
-            // designDocumentName: {
-            //     someViewFunction: {
-            //         map: "reference.to.a.function",
-            //         reduce: "reference.to.another.function"
-            //     },
-            //     anotherViewFunction: {
-            //         map: "reference.to.yet.another.function",
-            //         reduce: "reference.to.still.another.function"
-            //     },
-            //     validate_doc_update: "a.validation.function"
-            // }
-        }
+        // for example:
+        // designDocumentName: {
+        //     views: {
+        //         someViewFunction: {
+        //             map: "reference.to.a.function",
+        //             reduce: "reference.to.another.function"
+        //         },
+        //         anotherViewFunction: {
+        //             map: "reference.to.yet.another.function",
+        //             reduce: "reference.to.still.another.function"
+        //         }
+        //     },
+        //     validate_doc_update: "a.validation.function"
+        // }
     },
     invokers: {
         configureCouch: {
@@ -206,23 +208,24 @@ fluid.couchConfig.updateDesignDocument.renderFunctionString = function (func) {
     }
 };
 
-fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (viewsCollection) {
-    var transformedViews = fluid.transform(viewsCollection, function (desiredView, viewKey) {
+fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (designDocument) {
+    var transformedDesignDocument = fluid.transform(designDocument, function (obj, key) {
         // The special-case validate_doc_update function
-        if (viewKey && viewKey === "validate_doc_update") {
-            return fluid.couchConfig.updateDesignDocument.renderFunctionString(desiredView);
-        } else {
-            return fluid.transform(desiredView, function (viewFunc, funcKey) {
-                // The internal CouchDB reduce functions
-                if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
-                    return viewFunc;
-                }
-
-                return fluid.couchConfig.updateDesignDocument.renderFunctionString(viewFunc);
+        if (key && key === "validate_doc_update") {
+            return fluid.couchConfig.updateDesignDocument.renderFunctionString(obj);
+        } else if (key && key === "views"){
+            return fluid.transform(obj, function (desiredView) {
+                return fluid.transform(desiredView, function (viewFunc, funcKey) {
+                    // The internal CouchDB reduce functions
+                    if (funcKey === "reduce" && (viewFunc === "_count" || viewFunc === "_sum" || viewFunc === "_stats")) {
+                        return viewFunc;
+                    }
+                    return fluid.couchConfig.updateDesignDocument.renderFunctionString(viewFunc);
+                });
             });
         }
     });
-    return transformedViews;
+    return transformedDesignDocument;
 };
 
 fluid.couchConfig.action.writeToDb = function (targetDb, doc, id) {
