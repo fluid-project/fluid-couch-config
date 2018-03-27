@@ -73,6 +73,14 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
     }
 });
 
+fluid.defaults("fluid.tests.couchConfig.testCouchConfigRetryable", {
+    gradeNames: ["fluid.couchConfig.pipeline.retryable", "fluid.tests.couchConfig.testCouchConfig"],
+    retryOptions: {
+        maxRetries: 3,
+        retryDelay: 4
+    }
+});
+
 fluid.defaults("fluid.tests.couchConfig.dbCreateSequenceElement", {
     gradeNames: "fluid.test.sequenceElement",
     sequence: [{
@@ -112,7 +120,8 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     },
     modules: [{
         name: "Test couch config.",
-        tests: [{
+        tests: [
+            {
             name: "Test CouchDB intializing",
             expect: 1,
             sequence: [{
@@ -415,7 +424,7 @@ fluid.tests.couchConfig.verifyDbViewEquals = function (dbName, couchUrl, expecte
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
-    db.get("_design/testViews", function (err, actualDesignDoc) {        
+    db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
             jqUnit.assertTrue("The actual view map function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.map, actualDesignDoc.views.test.map));
             jqUnit.assertTrue("The actual view reduce function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.reduce, actualDesignDoc.views.test.reduce));
@@ -478,4 +487,57 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTest", {
     }
 });
 
-fluid.test.runTests("fluid.tests.couchConfig.couchConfigTest");
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    events: {
+        nanoCallBackDone: null
+    },
+    modules: [{
+        name: "Test couch config.",
+        tests: [
+            {
+            name: "Test retryable CouchDB config",
+            expect: 3,
+            sequence: [{
+                "func": "{retryableCouchConfigTest}.couchConfig.configureCouch"
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the first attempt to configure CouchDB"]
+            },{
+                func: "fluid.identity"
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the first retry to configure CouchDB"]
+            },{
+                func: "{retryableCouchConfigTest}.events.constructFixtures.fire"
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onSuccess",
+                "listener": "jqUnit.assert",
+                args: ["The DB was successfully configured on the second retry"]
+            }]
+        }]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTest", {
+    gradeNames: ["gpii.test.pouch.environment"],
+    port: 6789,
+    components: {
+        couchConfig: {
+            type: "fluid.tests.couchConfig.testCouchConfigRetryable",
+            createOnEvent: "{retryableCouchConfigTester}.events.onTestCaseStart"
+        },
+        retryableCouchConfigTester: {
+            type: "fluid.tests.couchConfig.retryableCouchConfigTester"
+        }
+    },
+    listeners: {
+        "onCreate.constructFixtures": null
+    }
+});
+
+// fluid.test.runTests(["fluid.tests.couchConfig.couchConfigTest"]);
+
+fluid.test.runTests(["fluid.tests.couchConfig.retryableCouchConfigTest"]);

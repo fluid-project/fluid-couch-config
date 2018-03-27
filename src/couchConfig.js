@@ -14,6 +14,43 @@ fluid.setLogging(true);
 
 var isEqual = require("underscore").isEqual;
 
+fluid.defaults("fluid.couchConfig.retryable", {
+    gradeNames: ["fluid.modelComponent"],
+    retryOptions: {
+        maxRetries: 3,
+        retryDelay: 10
+    },
+    model: {
+        currentRetries: 0
+    },
+    listeners: {
+        "onError.handleRetry": "{that}.handleRetry"
+    },
+    invokers: {
+        handleRetry: {
+            funcName: "fluid.couchConfig.retryable.handleRetry",
+            args: ["{that}", "{that}.configureCouch"]
+        }
+    }
+});
+
+fluid.couchConfig.retryable.handleRetry = function (couchConfig, retryingFunction) {
+    var maxRetries = couchConfig.options.retryOptions.maxRetries,
+        retryDelay = couchConfig.options.retryOptions.retryDelay,
+        currentRetries = couchConfig.model.currentRetries;
+
+        if (currentRetries < maxRetries) {
+            couchConfig.applier.change("currentRetries", currentRetries + 1);
+            fluid.log("Retry " + couchConfig.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
+            setTimeout(function () {
+                retryingFunction();
+            }, retryDelay * 1000);
+
+        } else {
+            fluid.log("Max retries exceeded");
+        }
+};
+
 fluid.defaults("fluid.couchConfig", {
     gradeNames: "fluid.component",
     couchOptions: {
@@ -64,6 +101,7 @@ fluid.defaults("fluid.couchConfig", {
             funcName: "fluid.couchConfig.configureCouch",
             args: [
                 "{that}.options.couchOptions",
+                "{that}.options.retryOptions",
                 "{that}.events.onConfiguring",
                 "{that}.events.onSuccess",
                 "{that}.events.onError"
@@ -77,7 +115,7 @@ fluid.defaults("fluid.couchConfig", {
     }
 });
 
-fluid.couchConfig.configureCouch = function (couchOptions, onConfiguringEvent, onSuccessEvent, onErrorEvent) {
+fluid.couchConfig.configureCouch = function (couchOptions, retryOptions, onConfiguringEvent, onSuccessEvent, onErrorEvent) {
     fluid.promise.fireTransformEvent(onConfiguringEvent, {}, {
         couchOptions : couchOptions
     }).then(function (value) {
@@ -368,4 +406,8 @@ fluid.defaults("fluid.couchConfig.pipeline", {
             }
         }
     }
+});
+
+fluid.defaults("fluid.couchConfig.pipeline.retryable", {
+    gradeNames: ["fluid.couchConfig.retryable", "fluid.couchConfig.pipeline"]
 });
