@@ -374,7 +374,7 @@ fluid.defaults("fluid.couchConfig.pipeline", {
 fluid.defaults("fluid.couchConfig.pipeline.retrying", {
     gradeNames: ["fluid.retrying"],
     events: {
-        "onError": "{couchConfig}.events.onError"
+        "onAttemptFailure": "{couchConfig}.events.onError"
     },
     invokers: {
         retryFunction: {

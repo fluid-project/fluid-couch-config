@@ -80,7 +80,7 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfigRetryable", {
             options: {
                 retryOptions: {
                     maxRetries: 3,
-                    retryDelay: 4
+                    retryDelay: 1
                 }
             }
         }
@@ -493,35 +493,75 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTest", {
     }
 });
 
-fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTester", {
-    gradeNames: ["fluid.test.testCaseHolder"],
-    events: {
-        nanoCallBackDone: null
-    },
-    modules: [{
-        name: "Test couch config.",
-        tests: [
-            {
-            name: "Test retryable CouchDB config",
-            expect: 3,
-            sequence: [{
+fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationElement", {
+    gradeNames: "fluid.test.sequenceElement",
+    sequence: [{
                 "func": "{retryableCouchConfigTest}.couchConfig.configureCouch"
             },{
                 "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
                 "listener": "jqUnit.assert",
                 args: ["An error was thrown on the first attempt to configure CouchDB"]
             },{
-                func: "fluid.identity"
-            },{
                 "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
                 "listener": "jqUnit.assert",
                 args: ["An error was thrown on the first retry to configure CouchDB"]
-            },{
+            }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationSequence", {
+    gradeNames: "fluid.test.sequence",
+    sequenceElements: {
+        attemptedConfiguration: {
+            gradeNames: "fluid.tests.couchConfig.retryable.attemptedConfigurationElement",
+            priority: "before:sequence"
+        }
+    }
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigSuccessTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    events: {
+        nanoCallBackDone: null
+    },
+    modules: [{
+        name: "Test retryable couch config (succeed on second retry).",
+        tests: [
+            {
+            name: "Test retryable CouchDB config (succeed on second retry)",
+            sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
+            expect: 3,
+            sequence: [{
                 func: "{retryableCouchConfigTest}.events.constructFixtures.fire"
             },{
                 "event": "{retryableCouchConfigTest}.couchConfig.events.onSuccess",
                 "listener": "jqUnit.assert",
                 args: ["The DB was successfully configured on the second retry"]
+            }]
+        }]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    events: {
+        nanoCallBackDone: null
+    },
+    modules: [{
+        name: "Test retryable couch config (give up after third retry).",
+        tests: [
+            {
+            name: "Test retryable CouchDB config (give up after third retry)",
+            sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
+            expect: 4,
+            sequence: [
+            {
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the second retry to configure CouchDB"]
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the third retry to configure CouchDB"]
             }]
         }]
     }]
@@ -534,9 +574,6 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTest", {
         couchConfig: {
             type: "fluid.tests.couchConfig.testCouchConfigRetryable",
             createOnEvent: "{retryableCouchConfigTester}.events.onTestCaseStart"
-        },
-        retryableCouchConfigTester: {
-            type: "fluid.tests.couchConfig.retryableCouchConfigTester"
         }
     },
     // We call constructFixtures later in the test for retryable
@@ -546,6 +583,25 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTest", {
     }
 });
 
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigSuccessTest", {
+    gradeNames: ["fluid.tests.couchConfig.retryableCouchConfigTest"],
+    components: {
+        retryableCouchConfigTester: {
+            type: "fluid.tests.couchConfig.retryableCouchConfigSuccessTester"
+        }
+    }
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTest", {
+    gradeNames: ["fluid.tests.couchConfig.retryableCouchConfigTest"],
+    components: {
+        retryableCouchConfigTester: {
+            type: "fluid.tests.couchConfig.retryableCouchConfigFailureTester"
+        }
+    }
+});
+
+// TODO: restore this
 // fluid.test.runTests(["fluid.tests.couchConfig.couchConfigTest"]);
 
-fluid.test.runTests(["fluid.tests.couchConfig.retryableCouchConfigTest"]);
+fluid.test.runTests(["fluid.tests.couchConfig.retryableCouchConfigSuccessTest", "fluid.tests.couchConfig.retryableCouchConfigFailureTest"]);

@@ -22,15 +22,14 @@ fluid.defaults("fluid.retrying", {
     model: {
         currentRetries: 0
     },
-    // In an implementation, this should be
-    // bound or fired by an appropriate
-    // error event in the function etc
-    // that we wish to retry
     events: {
-        "onError": null
+        // In an implementation, this should be
+        // fired to indicate a failed attempted
+        // action
+        "onAttemptFailure": null
     },
     listeners: {
-        "onError.handleRetry": "{that}.handleRetry"
+        "onAttemptFailure.handleRetry": "{that}.handleRetry"
     },
     invokers: {
         handleRetry: {
@@ -55,7 +54,7 @@ fluid.retrying.handleRetry = function (retrying, retryingFunction) {
                 retryingFunction();
             }, retryDelay * 1000);
 
-        } else {
+        } else {            
             fluid.log("Max retries exceeded");
         }
 };
