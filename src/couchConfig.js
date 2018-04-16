@@ -371,8 +371,8 @@ fluid.defaults("fluid.couchConfig.pipeline", {
     }
 });
 
-fluid.defaults("fluid.couchConfig.pipeline.retrying", {
-    gradeNames: ["fluid.retrying"],
+fluid.defaults("fluid.couchConfig.pipeline.retryingBehaviour", {
+    gradeNames: ["fluid.couchConfig.retryingBehaviour"],
     events: {
         "onAttemptFailure": "{couchConfig}.events.onError"
     },
@@ -383,11 +383,11 @@ fluid.defaults("fluid.couchConfig.pipeline.retrying", {
     }
 });
 
-fluid.defaults("fluid.couchConfig.pipeline.retryable", {
+fluid.defaults("fluid.couchConfig.pipeline.retrying", {
     gradeNames: ["fluid.couchConfig.pipeline"],
     components: {
-        retrying: {
-            type: "fluid.couchConfig.pipeline.retrying",
+        retryingBehaviour: {
+            type: "fluid.couchConfig.pipeline.retryingBehaviour",
         }
     }
 });

@@ -12,8 +12,10 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 var fluid = require("infusion");
 
 // Can be used as a subcomponent to implement
-// retrying behaviour
-fluid.defaults("fluid.retrying", {
+// retrying behaviour for an action that can
+// potentially fail, such as in a distributed
+// application set-up
+fluid.defaults("fluid.couchConfig.retryingBehaviour", {
     gradeNames: ["fluid.modelComponent"],
     retryOptions: {
         maxRetries: 3,
@@ -33,7 +35,7 @@ fluid.defaults("fluid.retrying", {
     },
     invokers: {
         handleRetry: {
-            funcName: "fluid.retrying.handleRetry",
+            funcName: "fluid.couchConfig.retryingBehaviour.handleRetry",
             args: ["{that}", "{that}.retryFunction"]
         },
         retryFunction: {
@@ -42,7 +44,7 @@ fluid.defaults("fluid.retrying", {
     }
 });
 
-fluid.retrying.handleRetry = function (retrying, retryingFunction) {
+fluid.couchConfig.retryingBehaviour.handleRetry = function (retrying, retryingFunction) {
     var maxRetries = retrying.options.retryOptions.maxRetries,
         retryDelay = retrying.options.retryOptions.retryDelay,
         currentRetries = retrying.model.currentRetries;
@@ -54,7 +56,7 @@ fluid.retrying.handleRetry = function (retrying, retryingFunction) {
                 retryingFunction();
             }, retryDelay * 1000);
 
-        } else {            
+        } else {
             fluid.log("Max retries exceeded");
         }
 };

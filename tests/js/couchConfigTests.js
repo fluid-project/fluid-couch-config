@@ -74,9 +74,9 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
 });
 
 fluid.defaults("fluid.tests.couchConfig.testCouchConfigRetryable", {
-    gradeNames: ["fluid.couchConfig.pipeline.retryable", "fluid.tests.couchConfig.testCouchConfig"],
+    gradeNames: ["fluid.couchConfig.pipeline.retrying", "fluid.tests.couchConfig.testCouchConfig"],
     components: {
-        retrying: {
+        retryingBehaviour: {
             options: {
                 retryOptions: {
                     maxRetries: 3,
