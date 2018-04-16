@@ -17,7 +17,9 @@ Can currently do the following:
 
 ## Notes
 
-Uses the official CouchDB Node library, [Nano](https://github.com/apache/couchdb-nano).
+* Uses the official CouchDB Node library, [Nano](https://github.com/apache/couchdb-nano).
+
+* Includes a behaviour-based grade (`fluid.couchConfig.retryingBehaviour`) to implement retrying functionality, which is useful when running initial configuration in distributed environments such as containerization
 
 ## Usage
 
