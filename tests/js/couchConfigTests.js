@@ -75,9 +75,15 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
 
 fluid.defaults("fluid.tests.couchConfig.testCouchConfigRetryable", {
     gradeNames: ["fluid.couchConfig.pipeline.retryable", "fluid.tests.couchConfig.testCouchConfig"],
-    retryOptions: {
-        maxRetries: 3,
-        retryDelay: 4
+    components: {
+        retrying: {
+            options: {
+                retryOptions: {
+                    maxRetries: 3,
+                    retryDelay: 4
+                }
+            }
+        }
     }
 });
 
@@ -533,6 +539,8 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTest", {
             type: "fluid.tests.couchConfig.retryableCouchConfigTester"
         }
     },
+    // We call constructFixtures later in the test for retryable
+    // behaviour, so we have to null it out here
     listeners: {
         "onCreate.constructFixtures": null
     }

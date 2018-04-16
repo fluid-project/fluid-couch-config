@@ -14,7 +14,7 @@ fluid.setLogging(true);
 
 var isEqual = require("underscore").isEqual;
 
-fluid.defaults("fluid.couchConfig.retryable", {
+fluid.defaults("fluid.retrying", {
     gradeNames: ["fluid.modelComponent"],
     retryOptions: {
         maxRetries: 3,
@@ -23,25 +23,28 @@ fluid.defaults("fluid.couchConfig.retryable", {
     model: {
         currentRetries: 0
     },
+    events: {
+        "onError": "{couchConfig}.events.onError"
+    },
     listeners: {
         "onError.handleRetry": "{that}.handleRetry"
     },
     invokers: {
         handleRetry: {
-            funcName: "fluid.couchConfig.retryable.handleRetry",
-            args: ["{that}", "{that}.configureCouch"]
+            funcName: "fluid.retrying.handleRetry",
+            args: ["{that}", "{couchConfig}.configureCouch"]
         }
     }
 });
 
-fluid.couchConfig.retryable.handleRetry = function (couchConfig, retryingFunction) {
-    var maxRetries = couchConfig.options.retryOptions.maxRetries,
-        retryDelay = couchConfig.options.retryOptions.retryDelay,
-        currentRetries = couchConfig.model.currentRetries;
+fluid.retrying.handleRetry = function (retrying, retryingFunction) {
+    var maxRetries = retrying.options.retryOptions.maxRetries,
+        retryDelay = retrying.options.retryOptions.retryDelay,
+        currentRetries = retrying.model.currentRetries;
 
         if (currentRetries < maxRetries) {
-            couchConfig.applier.change("currentRetries", currentRetries + 1);
-            fluid.log("Retry " + couchConfig.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
+            retrying.applier.change("currentRetries", currentRetries + 1);
+            fluid.log("Retry " + retrying.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
             setTimeout(function () {
                 retryingFunction();
             }, retryDelay * 1000);
@@ -409,5 +412,10 @@ fluid.defaults("fluid.couchConfig.pipeline", {
 });
 
 fluid.defaults("fluid.couchConfig.pipeline.retryable", {
-    gradeNames: ["fluid.couchConfig.retryable", "fluid.couchConfig.pipeline"]
+    gradeNames: ["fluid.couchConfig.pipeline"],
+    components: {
+        retrying: {
+            type: "fluid.retrying"
+        }
+    }
 });
