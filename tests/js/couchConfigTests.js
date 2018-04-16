@@ -601,7 +601,4 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTest", {
     }
 });
 
-// TODO: restore this
-// fluid.test.runTests(["fluid.tests.couchConfig.couchConfigTest"]);
-
-fluid.test.runTests(["fluid.tests.couchConfig.retryableCouchConfigSuccessTest", "fluid.tests.couchConfig.retryableCouchConfigFailureTest"]);
+fluid.test.runTests(["fluid.tests.couchConfig.couchConfigTest", "fluid.tests.couchConfig.retryableCouchConfigSuccessTest", "fluid.tests.couchConfig.retryableCouchConfigFailureTest"]);
