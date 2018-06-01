@@ -1,5 +1,5 @@
 /*
-Copyright 2017 OCAD University
+Copyright 2017-2018 OCAD University
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
 BSD license. You may not use this file except in compliance with one these
 Licenses.
@@ -10,7 +10,7 @@ https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENS
 "use strict";
 
 var fluid = require("infusion");
-fluid.setLogging(true);
+require("./retrying");
 
 var isEqual = require("underscore").isEqual;
 
@@ -64,6 +64,7 @@ fluid.defaults("fluid.couchConfig", {
             funcName: "fluid.couchConfig.configureCouch",
             args: [
                 "{that}.options.couchOptions",
+                "{that}.options.retryOptions",
                 "{that}.events.onConfiguring",
                 "{that}.events.onSuccess",
                 "{that}.events.onError"
@@ -77,7 +78,7 @@ fluid.defaults("fluid.couchConfig", {
     }
 });
 
-fluid.couchConfig.configureCouch = function (couchOptions, onConfiguringEvent, onSuccessEvent, onErrorEvent) {
+fluid.couchConfig.configureCouch = function (couchOptions, retryOptions, onConfiguringEvent, onSuccessEvent, onErrorEvent) {
     fluid.promise.fireTransformEvent(onConfiguringEvent, {}, {
         couchOptions : couchOptions
     }).then(function (value) {
@@ -366,6 +367,27 @@ fluid.defaults("fluid.couchConfig.pipeline", {
                     }
                 }
             }
+        }
+    }
+});
+
+fluid.defaults("fluid.couchConfig.pipeline.retryingBehaviour", {
+    gradeNames: ["fluid.couchConfig.retryingBehaviour"],
+    events: {
+        "onAttemptFailure": "{couchConfig}.events.onError"
+    },
+    invokers: {
+        retryFunction: {
+            func: "{couchConfig}.configureCouch"
+        }
+    }
+});
+
+fluid.defaults("fluid.couchConfig.pipeline.retrying", {
+    gradeNames: ["fluid.couchConfig.pipeline"],
+    components: {
+        retryingBehaviour: {
+            type: "fluid.couchConfig.pipeline.retryingBehaviour",
         }
     }
 });

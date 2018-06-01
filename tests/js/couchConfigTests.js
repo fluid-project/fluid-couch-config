@@ -73,6 +73,20 @@ fluid.defaults("fluid.tests.couchConfig.testCouchConfig", {
     }
 });
 
+fluid.defaults("fluid.tests.couchConfig.testCouchConfigRetryable", {
+    gradeNames: ["fluid.couchConfig.pipeline.retrying", "fluid.tests.couchConfig.testCouchConfig"],
+    components: {
+        retryingBehaviour: {
+            options: {
+                retryOptions: {
+                    maxRetries: 3,
+                    retryDelay: 1
+                }
+            }
+        }
+    }
+});
+
 fluid.defaults("fluid.tests.couchConfig.dbCreateSequenceElement", {
     gradeNames: "fluid.test.sequenceElement",
     sequence: [{
@@ -112,7 +126,8 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     },
     modules: [{
         name: "Test couch config.",
-        tests: [{
+        tests: [
+            {
             name: "Test CouchDB intializing",
             expect: 1,
             sequence: [{
@@ -415,7 +430,7 @@ fluid.tests.couchConfig.verifyDbViewEquals = function (dbName, couchUrl, expecte
     var nano = require("nano")(couchUrl);
     var db = nano.use(dbName);
 
-    db.get("_design/testViews", function (err, actualDesignDoc) {        
+    db.get("_design/testViews", function (err, actualDesignDoc) {
         if (!err) {
             jqUnit.assertTrue("The actual view map function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.map, actualDesignDoc.views.test.map));
             jqUnit.assertTrue("The actual view reduce function is is the same as expected", fluid.tests.couchConfig.functionsAreIdentical(expectedView.testViews.views.test.reduce, actualDesignDoc.views.test.reduce));
@@ -478,4 +493,112 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTest", {
     }
 });
 
-fluid.test.runTests("fluid.tests.couchConfig.couchConfigTest");
+fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationElement", {
+    gradeNames: "fluid.test.sequenceElement",
+    sequence: [{
+                "func": "{retryableCouchConfigTest}.couchConfig.configureCouch"
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the first attempt to configure CouchDB"]
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the first retry to configure CouchDB"]
+            }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationSequence", {
+    gradeNames: "fluid.test.sequence",
+    sequenceElements: {
+        attemptedConfiguration: {
+            gradeNames: "fluid.tests.couchConfig.retryable.attemptedConfigurationElement",
+            priority: "before:sequence"
+        }
+    }
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigSuccessTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    events: {
+        nanoCallBackDone: null
+    },
+    modules: [{
+        name: "Test retryable couch config (succeed on second retry).",
+        tests: [
+            {
+            name: "Test retryable CouchDB config (succeed on second retry)",
+            sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
+            expect: 3,
+            sequence: [{
+                func: "{retryableCouchConfigTest}.events.constructFixtures.fire"
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onSuccess",
+                "listener": "jqUnit.assert",
+                args: ["The DB was successfully configured on the second retry"]
+            }]
+        }]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTester", {
+    gradeNames: ["fluid.test.testCaseHolder"],
+    events: {
+        nanoCallBackDone: null
+    },
+    modules: [{
+        name: "Test retryable couch config (give up after third retry).",
+        tests: [
+            {
+            name: "Test retryable CouchDB config (give up after third retry)",
+            sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
+            expect: 4,
+            sequence: [
+            {
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the second retry to configure CouchDB"]
+            },{
+                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+                "listener": "jqUnit.assert",
+                args: ["An error was thrown on the third retry to configure CouchDB"]
+            }]
+        }]
+    }]
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigTest", {
+    gradeNames: ["gpii.test.pouch.environment"],
+    port: 6789,
+    components: {
+        couchConfig: {
+            type: "fluid.tests.couchConfig.testCouchConfigRetryable",
+            createOnEvent: "{retryableCouchConfigTester}.events.onTestCaseStart"
+        }
+    },
+    // We call constructFixtures later in the test for retryable
+    // behaviour, so we have to null it out here
+    listeners: {
+        "onCreate.constructFixtures": null
+    }
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigSuccessTest", {
+    gradeNames: ["fluid.tests.couchConfig.retryableCouchConfigTest"],
+    components: {
+        retryableCouchConfigTester: {
+            type: "fluid.tests.couchConfig.retryableCouchConfigSuccessTester"
+        }
+    }
+});
+
+fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTest", {
+    gradeNames: ["fluid.tests.couchConfig.retryableCouchConfigTest"],
+    components: {
+        retryableCouchConfigTester: {
+            type: "fluid.tests.couchConfig.retryableCouchConfigFailureTester"
+        }
+    }
+});
+
+fluid.test.runTests(["fluid.tests.couchConfig.couchConfigTest", "fluid.tests.couchConfig.retryableCouchConfigSuccessTest", "fluid.tests.couchConfig.retryableCouchConfigFailureTest"]);
