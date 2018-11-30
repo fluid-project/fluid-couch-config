@@ -28,7 +28,7 @@ fluid.defaults("fluid.couchConfig", {
     dbDesignDocuments: {
         // An object whose keys are the names of design documents to be
         // created in the database. Each design document can have a
-        // collection of zero or more views under the key 'views', where th
+        // collection of zero or more views under the key 'views', where the
         // keys are the name of each view. Each view would in turn have the
         // keys "map" and "reduce", which are function references or function
         // names for functions accessible by couchConfig. These functions,
