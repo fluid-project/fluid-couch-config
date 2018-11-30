@@ -19,7 +19,7 @@ module.exports = function (grunt) {
             all: ["src/**/*.js", "tests/**/*.js", "examples/**/*.js", "*.js"]
         },
         jsonlint: {
-            all: ["package.json", ".jshintrc", "src/**/*.json", "tests/**/*.json"]
+            all: ["package.json", "src/**/*.json", "tests/**/*.json"]
         }
     });
 
