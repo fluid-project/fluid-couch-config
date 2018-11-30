@@ -18,7 +18,7 @@ fluid.defaults("fluid.couchConfig", {
     gradeNames: "fluid.component",
     couchOptions: {
         couchUrl: "http://localhost:5984",
-        dbName: null, // To be provided
+        dbName: null // To be provided
     },
     dbDocuments: {
         // An object whose keys are the IDs of documents to
@@ -214,7 +214,7 @@ fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (designDoc
         // The special-case validate_doc_update function
         if (key && key === "validate_doc_update") {
             return fluid.couchConfig.updateDesignDocument.renderFunctionString(obj);
-        } else if (key && key === "views"){
+        } else if (key && key === "views") {
             return fluid.transform(obj, function (desiredView) {
                 return fluid.transform(desiredView, function (viewFunc, funcKey) {
                     // The internal CouchDB reduce functions
@@ -387,7 +387,7 @@ fluid.defaults("fluid.couchConfig.pipeline.retrying", {
     gradeNames: ["fluid.couchConfig.pipeline"],
     components: {
         retryingBehaviour: {
-            type: "fluid.couchConfig.pipeline.retryingBehaviour",
+            type: "fluid.couchConfig.pipeline.retryingBehaviour"
         }
     }
 });

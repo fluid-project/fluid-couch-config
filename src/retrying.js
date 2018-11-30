@@ -49,14 +49,14 @@ fluid.couchConfig.retryingBehaviour.handleRetry = function (retrying, retryingFu
         retryDelay = retrying.options.retryOptions.retryDelay,
         currentRetries = retrying.model.currentRetries;
 
-        if (currentRetries < maxRetries) {
-            retrying.applier.change("currentRetries", currentRetries + 1);
-            fluid.log("Retry " + retrying.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
-            setTimeout(function () {
-                retryingFunction();
-            }, retryDelay * 1000);
+    if (currentRetries < maxRetries) {
+        retrying.applier.change("currentRetries", currentRetries + 1);
+        fluid.log("Retry " + retrying.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
+        setTimeout(function () {
+            retryingFunction();
+        }, retryDelay * 1000);
 
-        } else {
-            fluid.log("Max retries exceeded");
-        }
+    } else {
+        fluid.log("Max retries exceeded");
+    }
 };
