@@ -8,12 +8,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+"
+    "url": "git+https://github.com/fluid-project/fluid-couch-config.git"
   },
   "author": "Fluid Project",
-  "license": "(BSD-3-Clause OR ECL-2.0)",
+  "license": "BSD-3-Clause",
   "bugs": {
-    "url": ""
+    "url": "https://issues.fluidproject.org/projects/SJRK/issues"
   },
   "homepage": "",
   "dependencies": {
