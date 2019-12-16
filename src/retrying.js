@@ -1,5 +1,5 @@
 /*
-Copyright 2017-2018 OCAD University
+Copyright 2017-2019 OCAD University
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
 BSD license. You may not use this file except in compliance with one these
 Licenses.
@@ -49,14 +49,14 @@ fluid.couchConfig.retryingBehaviour.handleRetry = function (retrying, retryingFu
         retryDelay = retrying.options.retryOptions.retryDelay,
         currentRetries = retrying.model.currentRetries;
 
-        if (currentRetries < maxRetries) {
-            retrying.applier.change("currentRetries", currentRetries + 1);
-            fluid.log("Retry " + retrying.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
-            setTimeout(function () {
-                retryingFunction();
-            }, retryDelay * 1000);
+    if (currentRetries < maxRetries) {
+        retrying.applier.change("currentRetries", currentRetries + 1);
+        fluid.log("Retry " + retrying.model.currentRetries + " of " + maxRetries + "; retrying after " + retryDelay + " seconds");
+        setTimeout(function () {
+            retryingFunction();
+        }, retryDelay * 1000);
 
-        } else {
-            fluid.log("Max retries exceeded");
-        }
+    } else {
+        fluid.log("Max retries exceeded");
+    }
 };

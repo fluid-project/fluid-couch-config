@@ -1,5 +1,5 @@
 /*
-Copyright 2017 OCAD University
+Copyright 2017-2019 OCAD University
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
 BSD license. You may not use this file except in compliance with one these
 Licenses.
@@ -126,8 +126,7 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTester", {
     },
     modules: [{
         name: "Test couch config.",
-        tests: [
-            {
+        tests: [{
             name: "Test CouchDB intializing",
             expect: 1,
             sequence: [{
@@ -496,16 +495,16 @@ fluid.defaults("fluid.tests.couchConfig.couchConfigTest", {
 fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationElement", {
     gradeNames: "fluid.test.sequenceElement",
     sequence: [{
-                "func": "{retryableCouchConfigTest}.couchConfig.configureCouch"
-            },{
-                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
-                "listener": "jqUnit.assert",
-                args: ["An error was thrown on the first attempt to configure CouchDB"]
-            },{
-                "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
-                "listener": "jqUnit.assert",
-                args: ["An error was thrown on the first retry to configure CouchDB"]
-            }]
+        "func": "{retryableCouchConfigTest}.couchConfig.configureCouch"
+    },{
+        "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+        "listener": "jqUnit.assert",
+        args: ["An error was thrown on the first attempt to configure CouchDB"]
+    },{
+        "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
+        "listener": "jqUnit.assert",
+        args: ["An error was thrown on the first retry to configure CouchDB"]
+    }]
 });
 
 fluid.defaults("fluid.tests.couchConfig.retryable.attemptedConfigurationSequence", {
@@ -525,8 +524,7 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigSuccessTester", {
     },
     modules: [{
         name: "Test retryable couch config (succeed on second retry).",
-        tests: [
-            {
+        tests: [{
             name: "Test retryable CouchDB config (succeed on second retry)",
             sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
             expect: 3,
@@ -548,13 +546,11 @@ fluid.defaults("fluid.tests.couchConfig.retryableCouchConfigFailureTester", {
     },
     modules: [{
         name: "Test retryable couch config (give up after third retry).",
-        tests: [
-            {
+        tests: [{
             name: "Test retryable CouchDB config (give up after third retry)",
             sequenceGrade: "fluid.tests.couchConfig.retryable.attemptedConfigurationSequence",
             expect: 4,
-            sequence: [
-            {
+            sequence: [{
                 "event": "{retryableCouchConfigTest}.couchConfig.events.onError",
                 "listener": "jqUnit.assert",
                 args: ["An error was thrown on the second retry to configure CouchDB"]

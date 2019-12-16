@@ -1,5 +1,5 @@
 /*
-Copyright 2017-2018 OCAD University
+Copyright 2017-2019 OCAD University
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
 BSD license. You may not use this file except in compliance with one these
 Licenses.
@@ -18,7 +18,7 @@ fluid.defaults("fluid.couchConfig", {
     gradeNames: "fluid.component",
     couchOptions: {
         couchUrl: "http://localhost:5984",
-        dbName: null, // To be provided
+        dbName: null // To be provided
     },
     dbDocuments: {
         // An object whose keys are the IDs of documents to
@@ -214,7 +214,7 @@ fluid.couchConfig.updateDesignDocument.renderViewFunctions = function (designDoc
         // The special-case validate_doc_update function
         if (key && key === "validate_doc_update") {
             return fluid.couchConfig.updateDesignDocument.renderFunctionString(obj);
-        } else if (key && key === "views"){
+        } else if (key && key === "views") {
             return fluid.transform(obj, function (desiredView) {
                 return fluid.transform(desiredView, function (viewFunc, funcKey) {
                     // The internal CouchDB reduce functions
@@ -263,8 +263,9 @@ fluid.couchConfig.action.updateSingleDocument = function (targetDb, doc, id) {
                 togo.resolve();
             } else {
                 fluid.log("Document " + id + " has been changed, attempting to update");
-                doc._rev = body._rev; // Including the _rev indicates an update
-                fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, doc, id), togo);
+                var docCopy = fluid.copy(doc);
+                docCopy._rev = body._rev; // Including the _rev indicates an update
+                fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, docCopy, id), togo);
             }
         } else {
             fluid.log("Document " + id + " not found, creating");
@@ -387,7 +388,7 @@ fluid.defaults("fluid.couchConfig.pipeline.retrying", {
     gradeNames: ["fluid.couchConfig.pipeline"],
     components: {
         retryingBehaviour: {
-            type: "fluid.couchConfig.pipeline.retryingBehaviour",
+            type: "fluid.couchConfig.pipeline.retryingBehaviour"
         }
     }
 });
