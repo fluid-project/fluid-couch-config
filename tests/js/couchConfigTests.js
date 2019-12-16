@@ -1,5 +1,5 @@
 /*
-Copyright 2017-2018 OCAD University
+Copyright 2017-2019 OCAD University
 Licensed under the New BSD license. You may not use this file except in
 compliance with one these Licenses. You may obtain a copy of the BSD License at
 https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENSE.txt

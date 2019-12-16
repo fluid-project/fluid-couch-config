@@ -1,5 +1,5 @@
 /*
-Copyright 2017-2018 OCAD University
+Copyright 2017-2019 OCAD University
 Licensed under the New BSD license. You may not use this file except in
 compliance with one these Licenses. You may obtain a copy of the BSD License at
 https://raw.githubusercontent.com/fluid-project/fluid-couch-config/master/LICENSE.txt
@@ -261,8 +261,9 @@ fluid.couchConfig.action.updateSingleDocument = function (targetDb, doc, id) {
                 togo.resolve();
             } else {
                 fluid.log("Document " + id + " has been changed, attempting to update");
-                doc._rev = body._rev; // Including the _rev indicates an update
-                fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, doc, id), togo);
+                var docCopy = fluid.copy(doc);
+                docCopy._rev = body._rev; // Including the _rev indicates an update
+                fluid.promise.follow(fluid.couchConfig.action.writeToDb(targetDb, docCopy, id), togo);
             }
         } else {
             fluid.log("Document " + id + " not found, creating");

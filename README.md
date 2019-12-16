@@ -13,7 +13,7 @@ Can currently do the following:
 
 * Write configurations for Infusion applications using CouchDB, using Infusion
 * Integrate with existing Infusion components, such as Kettle
-* Don't needlessly create revisions of documents - checks for "equivalency" (document content aside from `_id` and `_rev` values) before updating
+* Don't needlessly create revisions of documents - checks for "equivalence" (document content aside from `_id` and `_rev` values) before updating
 
 ## Notes
 
