@@ -17,18 +17,18 @@
   },
   "homepage": "https://github.com/fluid-project/fluid-couch-config",
   "dependencies": {
-    "infusion": "3.0.0-dev.20191126T121754Z.6452de06f.FLUID-6145",
-    "nano": "6.4.0",
-    "underscore": "1.8.3"
+    "infusion": "3.0.0-dev.20200213T104048Z.a09c72b8f.FLUID-6145",
+    "nano": "8.1.0",
+    "underscore": "1.9.2"
   },
   "devDependencies": {
     "eslint-config-fluid": "1.1.0",
     "fluid-grunt-eslint": "18.1.2",
     "gpii-pouchdb": "1.0.15",
-    "kettle": "1.6.4",
-    "grunt": "1.0.1",
-    "grunt-eslint": "20.0.0",
-    "grunt-jsonlint": "1.1.0",
-    "node-jqunit": "1.1.6"
+    "kettle": "1.11.0",
+    "grunt": "1.0.4",
+    "grunt-eslint": "22.0.0",
+    "grunt-jsonlint": "2.1.1",
+    "node-jqunit": "1.1.8"
   }
 }
