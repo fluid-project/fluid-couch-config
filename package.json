@@ -1,0 +1,34 @@
+{
+  "name": "fluid-couch-config",
+  "version": "0.0.1",
+  "description": "Declarative CouchDB configs using Infusion",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/js/couchConfigTests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluid-project/fluid-couch-config.git"
+  },
+  "author": "Fluid Project",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://issues.fluidproject.org/projects/SJRK/issues"
+  },
+  "homepage": "https://github.com/fluid-project/fluid-couch-config",
+  "dependencies": {
+    "infusion": "3.0.0-dev.20200213T104048Z.a09c72b8f.FLUID-6145",
+    "nano": "8.1.0",
+    "underscore": "1.9.2"
+  },
+  "devDependencies": {
+    "eslint-config-fluid": "1.1.0",
+    "fluid-grunt-eslint": "18.1.2",
+    "gpii-pouchdb": "1.0.15",
+    "kettle": "1.11.0",
+    "grunt": "1.0.4",
+    "grunt-eslint": "22.0.0",
+    "grunt-jsonlint": "2.1.1",
+    "node-jqunit": "1.1.8"
+  }
+}
